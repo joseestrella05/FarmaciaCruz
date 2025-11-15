@@ -43,8 +43,12 @@ android {
 }
 
 dependencies {
+    //firestore
+    implementation("com.google.firebase:firebase-firestore-ktx:24.9.1")
 
     implementation("androidx.hilt:hilt-work:1.2.0")
+    implementation(libs.androidx.datastore.core.android)
+    implementation(libs.firebase.firestore.ktx)
     ksp("androidx.hilt:hilt-compiler:1.2.0")
     implementation("androidx.work:work-runtime-ktx:2.9.1")
     implementation("androidx.startup:startup-runtime:1.1.1")
@@ -67,7 +71,7 @@ dependencies {
 
     //optional
     implementation("androidx.room:room-ktx:2.6.1")
-    implementation("androidx.compose.material3:material3:1.1.0-alpha02")
+    implementation("androidx.compose.material3:material3:1.1.0-alpha11")
     implementation ("androidx.compose.material:material:1.4.0")
     implementation("androidx.compose.material:material:1.3.1") // Usa la última versión
     implementation("androidx.compose.material:material-icons-extended")
@@ -77,11 +81,15 @@ dependencies {
     ksp("com.google.dagger:hilt-android-compiler:2.51")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
 
+    // DataStore Preferences
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
+
     //Retrofit
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.moshi:moshi-kotlin:1.14.0")
     implementation("com.squareup.retrofit2:converter-moshi:2.9.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
