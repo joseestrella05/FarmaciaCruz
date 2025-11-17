@@ -1,12 +1,11 @@
 package edu.ucne.farmaciacruz.presentation.Configuracion
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -91,7 +90,7 @@ fun ConfiguracionScreen(
                     ) {
                         Surface(
                             modifier = Modifier.size(64.dp),
-                            shape = MaterialTheme.shapes.medium,
+                            shape = CircleShape,
                             color = MaterialTheme.colorScheme.primary
                         ) {
                             Box(contentAlignment = Alignment.Center) {
@@ -149,7 +148,11 @@ fun ConfiguracionScreen(
 
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                    onClick = {
+                        tempApiUrl = state.apiUrl
+                        showApiDialog = true
+                    }
                 ) {
                     ListItem(
                         headlineContent = {
@@ -174,18 +177,11 @@ fun ConfiguracionScreen(
                             )
                         },
                         trailingContent = {
-                            IconButton(
-                                onClick = {
-                                    tempApiUrl = state.apiUrl
-                                    showApiDialog = true
-                                }
-                            ) {
-                                Icon(
-                                    Icons.Default.Edit,
-                                    "Editar",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            }
+                            Icon(
+                                Icons.Default.Edit,
+                                "Editar",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
                         }
                     )
                 }
@@ -239,7 +235,10 @@ fun ConfiguracionScreen(
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.errorContainer
                     ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                    onClick = {
+                        viewModel.processIntent(ConfiguracionIntent.ShowLogoutDialog)
+                    }
                 ) {
                     ListItem(
                         headlineContent = {
@@ -262,9 +261,6 @@ fun ConfiguracionScreen(
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.error
                             )
-                        },
-                        modifier = Modifier.clickable {
-                            viewModel.processIntent(ConfiguracionIntent.ShowLogoutDialog)
                         }
                     )
                 }
@@ -275,7 +271,7 @@ fun ConfiguracionScreen(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Divider(modifier = Modifier.padding(vertical = 8.dp))
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                     Text(
                         text = "Farmacia Cruz App",
                         style = MaterialTheme.typography.labelLarge,
