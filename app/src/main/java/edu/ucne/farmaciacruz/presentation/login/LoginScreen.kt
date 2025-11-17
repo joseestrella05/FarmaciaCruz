@@ -90,8 +90,9 @@ fun LoginScreenContent(
                 painter = painterResource(id = R.drawable.logo_farmacia_cruz),
                 contentDescription = "Farmacia Cruz Logo",
                 modifier = Modifier
-                    .size(170.dp)
+                    .size(250.dp)
                     .align(Alignment.CenterHorizontally)
+
             )
 
             Spacer(modifier = Modifier.height(8.dp))
