@@ -1,4 +1,4 @@
-package edu.ucne.farmaciacruz.presentation.Configuracion
+package edu.ucne.farmaciacruz.presentation.configuracion
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

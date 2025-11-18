@@ -1,4 +1,4 @@
-package edu.ucne.farmaciacruz.presentation.Configuracion
+package edu.ucne.farmaciacruz.presentation.configuracion
 
 import edu.ucne.farmaciacruz.domain.model.User
 
