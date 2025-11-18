@@ -11,8 +11,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import edu.ucne.farmaciacruz.MainViewModel
-import edu.ucne.farmaciacruz.presentation.Configuracion.ConfiguracionScreen
+import edu.ucne.farmaciacruz.presentation.configuracion.ConfiguracionScreen
 import edu.ucne.farmaciacruz.presentation.login.LoginScreen
+import edu.ucne.farmaciacruz.presentation.login.recoverypassword.RecuperarPasswordScreen
+import edu.ucne.farmaciacruz.presentation.login.registro.RegistroScreen
 import edu.ucne.farmaciacruz.presentation.producto.ProductosScreen
 
 @Composable
@@ -87,9 +89,25 @@ fun AppNavigation(
         }
 
         composable<RegistroRoute> {
+            RegistroScreen(
+                onRegistroSuccess = {
+                    navController.navigate(ProductosRoute) {
+                        popUpTo(LoginRoute) { inclusive = true }
+                    }
+                },
+                onBackToLogin = {
+                    navController.popBackStack()
+                }
+            )
         }
 
         composable<RecuperarPasswordRoute> {
+            RecuperarPasswordScreen(
+                onBackToLogin = {
+                    navController.popBackStack()
+                }
+            )
         }
+
     }
 }
