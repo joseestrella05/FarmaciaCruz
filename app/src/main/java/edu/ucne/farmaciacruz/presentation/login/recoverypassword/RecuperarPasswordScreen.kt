@@ -81,6 +81,7 @@ private fun RecuperarPasswordContent(
                 .fillMaxSize()
                 .background(onPrimaryContainerDarkHighContrast)
                 .padding(paddingValues)
+                .windowInsetsPadding(WindowInsets.systemBars)
         ) {
             IconButton(
                 onClick = onVolverLogin,
@@ -113,8 +114,6 @@ private fun RecuperarPasswordContent(
                             contentDescription = "Farmacia Cruz Logo",
                             modifier = Modifier
                                 .size(180.dp)
-
-
                         )
                     }
                 }
@@ -302,86 +301,6 @@ private fun RecuperarPasswordPreview() {
                 isLoading = false,
                 emailEnviado = false,
                 error = null
-            ),
-            snackbarHostState = remember { SnackbarHostState() },
-            onEmailChanged = {},
-            onEnviarClicked = {},
-            onVolverLogin = {},
-            onClearError = {}
-        )
-    }
-}
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-private fun RecuperarPasswordWithEmailPreview() {
-    MaterialTheme {
-        RecuperarPasswordContent(
-            state = RecuperarPasswordState(
-                email = "usuario@ejemplo.com",
-                isLoading = false,
-                emailEnviado = false,
-                error = null
-            ),
-            snackbarHostState = remember { SnackbarHostState() },
-            onEmailChanged = {},
-            onEnviarClicked = {},
-            onVolverLogin = {},
-            onClearError = {}
-        )
-    }
-}
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-private fun RecuperarPasswordLoadingPreview() {
-    MaterialTheme {
-        RecuperarPasswordContent(
-            state = RecuperarPasswordState(
-                email = "usuario@ejemplo.com",
-                isLoading = true,
-                emailEnviado = false,
-                error = null
-            ),
-            snackbarHostState = remember { SnackbarHostState() },
-            onEmailChanged = {},
-            onEnviarClicked = {},
-            onVolverLogin = {},
-            onClearError = {}
-        )
-    }
-}
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-private fun RecuperarPasswordSuccessPreview() {
-    MaterialTheme {
-        RecuperarPasswordContent(
-            state = RecuperarPasswordState(
-                email = "usuario@ejemplo.com",
-                isLoading = false,
-                emailEnviado = true,
-                error = null
-            ),
-            snackbarHostState = remember { SnackbarHostState() },
-            onEmailChanged = {},
-            onEnviarClicked = {},
-            onVolverLogin = {},
-            onClearError = {}
-        )
-    }
-}
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-private fun RecuperarPasswordErrorPreview() {
-    MaterialTheme {
-        RecuperarPasswordContent(
-            state = RecuperarPasswordState(
-                email = "usuario@ejemplo.com",
-                isLoading = false,
-                emailEnviado = false,
-                error = "El correo electrónico no está registrado"
             ),
             snackbarHostState = remember { SnackbarHostState() },
             onEmailChanged = {},

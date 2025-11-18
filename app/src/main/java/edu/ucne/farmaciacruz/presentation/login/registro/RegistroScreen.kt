@@ -9,6 +9,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.Medication
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -86,6 +87,7 @@ private fun RegistroContent(
         modifier = Modifier
             .fillMaxSize()
             .background(onPrimaryContainerDarkHighContrast)
+            .windowInsetsPadding(WindowInsets.systemBars)
     ) {
         Column(
             modifier = Modifier
@@ -106,6 +108,7 @@ private fun RegistroContent(
                         contentDescription = "Farmacia Cruz Logo",
                         modifier = Modifier
                             .size(180.dp)
+
 
                     )
                 }
@@ -434,4 +437,3 @@ private fun RegistroScreenPreview() {
         )
     }
 }
-

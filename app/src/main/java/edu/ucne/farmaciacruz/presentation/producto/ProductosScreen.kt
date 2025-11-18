@@ -1,3 +1,4 @@
+
 package edu.ucne.farmaciacruz.presentation.producto
 
 import androidx.compose.foundation.background
@@ -19,6 +20,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
@@ -48,7 +50,36 @@ fun ProductosScreen(
         }
     }
 
+    ProductosScreenContent(
+        state = state,
+        snackbarHostState = snackbarHostState,
+        cantidadCarrito = viewModel.getCantidadItemsCarrito(),
+        onSearchQueryChanged = { viewModel.processIntent(ProductosIntent.SearchQueryChanged(it)) },
+        onCategoriaSelected = { viewModel.processIntent(ProductosIntent.CategoriaSelected(it)) },
+        onProductoClicked = { viewModel.processIntent(ProductosIntent.ProductoClicked(it)) },
+        onAddToCart = { viewModel.processIntent(ProductosIntent.AddToCart(it)) },
+        onLoadProductos = { viewModel.processIntent(ProductosIntent.LoadProductos) },
+        onCarritoClick = onCarritoClick,
+        onConfigClick = onConfigClick
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ProductosScreenContent(
+    state: ProductosState,
+    snackbarHostState: SnackbarHostState,
+    cantidadCarrito: Int,
+    onSearchQueryChanged: (String) -> Unit,
+    onCategoriaSelected: (String?) -> Unit,
+    onProductoClicked: (Int) -> Unit,
+    onAddToCart: (Producto) -> Unit,
+    onLoadProductos: () -> Unit,
+    onCarritoClick: () -> Unit,
+    onConfigClick: () -> Unit
+) {
     Scaffold(
+        modifier = Modifier.windowInsetsPadding(WindowInsets.systemBars),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             Surface(
@@ -88,7 +119,6 @@ fun ProductosScreen(
 
                             BadgedBox(
                                 badge = {
-                                    val cantidadCarrito = viewModel.getCantidadItemsCarrito()
                                     if (cantidadCarrito > 0) {
                                         Badge(
                                             containerColor = MaterialTheme.colorScheme.error
@@ -116,9 +146,7 @@ fun ProductosScreen(
 
                     OutlinedTextField(
                         value = state.searchQuery,
-                        onValueChange = {
-                            viewModel.processIntent(ProductosIntent.SearchQueryChanged(it))
-                        },
+                        onValueChange = onSearchQueryChanged,
                         modifier = Modifier.fillMaxWidth(),
                         placeholder = {
                             Text("Buscar productos…")
@@ -133,9 +161,7 @@ fun ProductosScreen(
                         trailingIcon = {
                             if (state.searchQuery.isNotEmpty()) {
                                 IconButton(
-                                    onClick = {
-                                        viewModel.processIntent(ProductosIntent.SearchQueryChanged(""))
-                                    }
+                                    onClick = { onSearchQueryChanged("") }
                                 ) {
                                     Icon(
                                         Icons.Filled.Clear,
@@ -196,11 +222,7 @@ fun ProductosScreen(
                                 text = state.error!!,
                                 style = MaterialTheme.typography.bodyLarge
                             )
-                            Button(
-                                onClick = {
-                                    viewModel.processIntent(ProductosIntent.LoadProductos)
-                                }
-                            ) {
+                            Button(onClick = onLoadProductos) {
                                 Text("Reintentar")
                             }
                         }
@@ -250,22 +272,14 @@ fun ProductosScreen(
                                     ) {
                                         FilterChip(
                                             selected = state.selectedCategoria == null,
-                                            onClick = {
-                                                viewModel.processIntent(
-                                                    ProductosIntent.CategoriaSelected(null)
-                                                )
-                                            },
+                                            onClick = { onCategoriaSelected(null) },
                                             label = { Text("Todas") }
                                         )
 
                                         state.categorias.take(3).forEach { categoria ->
                                             FilterChip(
                                                 selected = state.selectedCategoria == categoria,
-                                                onClick = {
-                                                    viewModel.processIntent(
-                                                        ProductosIntent.CategoriaSelected(categoria)
-                                                    )
-                                                },
+                                                onClick = { onCategoriaSelected(categoria) },
                                                 label = { Text(categoria) }
                                             )
                                         }
@@ -323,16 +337,8 @@ fun ProductosScreen(
                             items(state.productosFiltrados) { producto ->
                                 ProductoCard(
                                     producto = producto,
-                                    onClick = {
-                                        viewModel.processIntent(
-                                            ProductosIntent.ProductoClicked(producto.id)
-                                        )
-                                    },
-                                    onAddToCart = {
-                                        viewModel.processIntent(
-                                            ProductosIntent.AddToCart(producto)
-                                        )
-                                    }
+                                    onClick = { onProductoClicked(producto.id) },
+                                    onAddToCart = { onAddToCart(producto) }
                                 )
                             }
                         }
@@ -462,7 +468,8 @@ fun ProductoCard(
         ) {
             Surface(
                 modifier = Modifier.size(80.dp),
-                shape = RoundedCornerShape(12.dp)
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant
             ) {
                 AsyncImage(
                     model = producto.imagenUrl,
@@ -543,5 +550,52 @@ fun ProductoCard(
                 )
             }
         }
+    }
+}
+
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun ProductosScreenPreview() {
+    val sampleProductos = listOf(
+        Producto(
+            id = 1,
+            nombre = "Paracetamol 500mg",
+            descripcion = "Analgésico y antipirético",
+            precio = 45.00,
+            imagenUrl = "",
+            categoria = "Medicamentos"
+        ),
+        Producto(
+            id = 2,
+            nombre = "Ibuprofeno 400mg",
+            descripcion = "Antiinflamatorio",
+            precio = 65.00,
+            imagenUrl = "",
+            categoria = "Medicamentos"
+        )
+    )
+
+    MaterialTheme {
+        ProductosScreenContent(
+            state = ProductosState(
+                productos = sampleProductos,
+                productosFiltrados = sampleProductos,
+                categorias = listOf("Medicamentos", "Vitaminas"),
+                selectedCategoria = null,
+                searchQuery = "",
+                isLoading = false,
+                error = null
+            ),
+            snackbarHostState = remember { SnackbarHostState() },
+            cantidadCarrito = 3,
+            onSearchQueryChanged = {},
+            onCategoriaSelected = {},
+            onProductoClicked = {},
+            onAddToCart = {},
+            onLoadProductos = {},
+            onCarritoClick = {},
+            onConfigClick = {}
+        )
     }
 }
