@@ -10,7 +10,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
-import edu.ucne.farmaciacruz.MainViewModel
+import edu.ucne.farmaciacruz.data.local.PreferencesManager
 import edu.ucne.farmaciacruz.presentation.configuracion.ConfiguracionScreen
 import edu.ucne.farmaciacruz.presentation.login.LoginScreen
 import edu.ucne.farmaciacruz.presentation.login.recoverypassword.RecuperarPasswordScreen
@@ -20,9 +20,9 @@ import edu.ucne.farmaciacruz.presentation.producto.ProductosScreen
 @Composable
 fun AppNavigation(
     navController: NavHostController = rememberNavController(),
-    mainViewModel: MainViewModel = hiltViewModel()
+    preferencesManager: PreferencesManager = hiltViewModel<NavigationViewModel>().preferencesManager
 ) {
-    val token by mainViewModel.isLoggedIn.collectAsState()
+    val token by preferencesManager.getToken().collectAsState(initial = null)
 
     val startDestination = if (!token.isNullOrEmpty()) ProductosRoute else LoginRoute
 
@@ -102,6 +102,5 @@ fun AppNavigation(
                 }
             )
         }
-
     }
 }
