@@ -6,11 +6,11 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import edu.ucne.farmaciacruz.data.remote.api.ApiService
 import edu.ucne.farmaciacruz.data.remote.request.RecoveryRequest
-import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -23,15 +23,15 @@ class RecuperarPasswordViewModel @Inject constructor(
     private val _state = MutableStateFlow(RecuperarPasswordState())
     val state: StateFlow<RecuperarPasswordState> = _state.asStateFlow()
 
-    private val _event = Channel<RecuperarPasswordEvent>(Channel.BUFFERED)
-    val event = _event.receiveAsFlow()
+    private val _uiEvent = MutableSharedFlow<RecuperarPasswordUiEvent>()
+    val uiEvent = _uiEvent.asSharedFlow()
 
-    fun processIntent(intent: RecuperarPasswordIntent) {
-        when (intent) {
-            is RecuperarPasswordIntent.EmailChanged -> handleEmailChanged(intent.email)
-            is RecuperarPasswordIntent.EnviarClicked -> handleEnviarEmail()
-            is RecuperarPasswordIntent.VolverLogin -> handleVolverLogin()
-            is RecuperarPasswordIntent.ClearError -> handleClearError()
+    fun onEvent(event: RecuperarPasswordEvent) {
+        when (event) {
+            is RecuperarPasswordEvent.EmailChanged -> handleEmailChanged(event.email)
+            is RecuperarPasswordEvent.EnviarClicked -> handleEnviarEmail()
+            is RecuperarPasswordEvent.VolverLogin -> handleVolverLogin()
+            is RecuperarPasswordEvent.ClearError -> handleClearError()
         }
     }
 
@@ -69,8 +69,8 @@ class RecuperarPasswordViewModel @Inject constructor(
                             error = null
                         )
                     }
-                    _event.send(
-                        RecuperarPasswordEvent.ShowSuccess(
+                    _uiEvent.emit(
+                        RecuperarPasswordUiEvent.ShowSuccess(
                             "Te enviamos un enlace para restablecer tu contraseña. Revisa tu correo."
                         )
                     )
@@ -89,8 +89,8 @@ class RecuperarPasswordViewModel @Inject constructor(
                         error = "Error de conexión. Verifica tu internet."
                     )
                 }
-                _event.send(
-                    RecuperarPasswordEvent.ShowError(
+                _uiEvent.emit(
+                    RecuperarPasswordUiEvent.ShowError(
                         e.message ?: "Error desconocido"
                     )
                 )
@@ -100,7 +100,7 @@ class RecuperarPasswordViewModel @Inject constructor(
 
     private fun handleVolverLogin() {
         viewModelScope.launch {
-            _event.send(RecuperarPasswordEvent.NavigateToLogin)
+            _uiEvent.emit(RecuperarPasswordUiEvent.NavigateToLogin)
         }
     }
 
@@ -108,7 +108,3 @@ class RecuperarPasswordViewModel @Inject constructor(
         _state.update { it.copy(error = null) }
     }
 }
-
-data class SolicitarRecuperacionRequest(
-    val email: String
-)

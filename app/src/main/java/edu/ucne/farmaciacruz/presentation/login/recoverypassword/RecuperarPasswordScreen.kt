@@ -8,7 +8,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.outlined.Medication
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,37 +16,41 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import edu.ucne.farmaciacruz.R
 import edu.ucne.farmaciacruz.ui.theme.onPrimaryContainerDarkHighContrast
-import edu.ucne.farmaciacruz.ui.theme.onPrimaryDarkMediumContrast
 
+sealed class RecuperarPasswordUiEvent {
+    data class ShowError(val message: String) : RecuperarPasswordUiEvent()
+    data class ShowSuccess(val message: String) : RecuperarPasswordUiEvent()
+    data object NavigateToLogin : RecuperarPasswordUiEvent()
+}
 @Composable
 fun RecuperarPasswordScreen(
     onBackToLogin: () -> Unit,
     viewModel: RecuperarPasswordViewModel = hiltViewModel()
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
-        viewModel.event.collect { event ->
+        viewModel.uiEvent.collect { event ->
             when (event) {
-                is RecuperarPasswordEvent.ShowError -> {
+                is RecuperarPasswordUiEvent.ShowError -> {
                     snackbarHostState.showSnackbar(
                         message = event.message,
                         duration = SnackbarDuration.Short
                     )
                 }
-                is RecuperarPasswordEvent.ShowSuccess -> {
+                is RecuperarPasswordUiEvent.ShowSuccess -> {
                     snackbarHostState.showSnackbar(
                         message = event.message,
                         duration = SnackbarDuration.Long
                     )
                 }
-                is RecuperarPasswordEvent.NavigateToLogin -> {
+                is RecuperarPasswordUiEvent.NavigateToLogin -> {
                     onBackToLogin()
                 }
             }
@@ -57,10 +60,7 @@ fun RecuperarPasswordScreen(
     RecuperarPasswordContent(
         state = state,
         snackbarHostState = snackbarHostState,
-        onEmailChanged = { viewModel.processIntent(RecuperarPasswordIntent.EmailChanged(it)) },
-        onEnviarClicked = { viewModel.processIntent(RecuperarPasswordIntent.EnviarClicked) },
-        onVolverLogin = { viewModel.processIntent(RecuperarPasswordIntent.VolverLogin) },
-        onClearError = { viewModel.processIntent(RecuperarPasswordIntent.ClearError) }
+        onEvent = viewModel::onEvent
     )
 }
 
@@ -68,10 +68,7 @@ fun RecuperarPasswordScreen(
 private fun RecuperarPasswordContent(
     state: RecuperarPasswordState,
     snackbarHostState: SnackbarHostState,
-    onEmailChanged: (String) -> Unit,
-    onEnviarClicked: () -> Unit,
-    onVolverLogin: () -> Unit,
-    onClearError: () -> Unit
+    onEvent: (RecuperarPasswordEvent) -> Unit
 ) {
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
@@ -84,7 +81,7 @@ private fun RecuperarPasswordContent(
                 .windowInsetsPadding(WindowInsets.systemBars)
         ) {
             IconButton(
-                onClick = onVolverLogin,
+                onClick = { onEvent(RecuperarPasswordEvent.VolverLogin) },
                 modifier = Modifier
                     .padding(16.dp)
                     .align(Alignment.TopStart)
@@ -112,8 +109,7 @@ private fun RecuperarPasswordContent(
                         Image(
                             painter = painterResource(id = R.drawable.logo_farmacia_cruz),
                             contentDescription = "Farmacia Cruz Logo",
-                            modifier = Modifier
-                                .size(180.dp)
+                            modifier = Modifier.size(180.dp)
                         )
                     }
                 }
@@ -155,7 +151,6 @@ private fun RecuperarPasswordContent(
                             .padding(24.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-
                         Text(
                             text = "Correo electrónico",
                             style = MaterialTheme.typography.bodyMedium,
@@ -167,7 +162,7 @@ private fun RecuperarPasswordContent(
                         )
                         OutlinedTextField(
                             value = state.email,
-                            onValueChange = onEmailChanged,
+                            onValueChange = { onEvent(RecuperarPasswordEvent.EmailChanged(it)) },
                             modifier = Modifier.fillMaxWidth(),
                             placeholder = {
                                 Text(
@@ -210,7 +205,7 @@ private fun RecuperarPasswordContent(
                         Spacer(modifier = Modifier.height(24.dp))
 
                         Button(
-                            onClick = onEnviarClicked,
+                            onClick = { onEvent(RecuperarPasswordEvent.EnviarClicked) },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(50.dp),
@@ -239,7 +234,7 @@ private fun RecuperarPasswordContent(
                         Spacer(modifier = Modifier.height(16.dp))
 
                         TextButton(
-                            onClick = onVolverLogin,
+                            onClick = { onEvent(RecuperarPasswordEvent.VolverLogin) },
                             enabled = !state.isLoading
                         ) {
                             Text(
@@ -251,7 +246,8 @@ private fun RecuperarPasswordContent(
                         }
                     }
                 }
-                if (state.error != null) {
+
+                state.error?.let { error ->
                     Spacer(modifier = Modifier.height(16.dp))
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -268,13 +264,13 @@ private fun RecuperarPasswordContent(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = state.error!!,
+                                text = error,
                                 color = MaterialTheme.colorScheme.onErrorContainer,
                                 style = MaterialTheme.typography.bodyMedium,
                                 modifier = Modifier.weight(1f)
                             )
                             IconButton(
-                                onClick = onClearError,
+                                onClick = { onEvent(RecuperarPasswordEvent.ClearError) },
                                 modifier = Modifier.size(20.dp)
                             ) {
                                 Text(
@@ -288,25 +284,5 @@ private fun RecuperarPasswordContent(
                 }
             }
         }
-    }
-}
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-private fun RecuperarPasswordPreview() {
-    MaterialTheme {
-        RecuperarPasswordContent(
-            state = RecuperarPasswordState(
-                email = "",
-                isLoading = false,
-                emailEnviado = false,
-                error = null
-            ),
-            snackbarHostState = remember { SnackbarHostState() },
-            onEmailChanged = {},
-            onEnviarClicked = {},
-            onVolverLogin = {},
-            onClearError = {}
-        )
     }
 }
