@@ -3,9 +3,11 @@ package edu.ucne.farmaciacruz.presentation.producto
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import edu.ucne.farmaciacruz.data.local.PreferencesManager
 import edu.ucne.farmaciacruz.domain.model.CarritoItem
 import edu.ucne.farmaciacruz.domain.model.Producto
 import edu.ucne.farmaciacruz.domain.model.Resource
+import edu.ucne.farmaciacruz.domain.repository.CarritoRepository
 import edu.ucne.farmaciacruz.domain.usecase.producto.GetProductosUseCase
 import edu.ucne.farmaciacruz.domain.usecase.producto.SearchProductosUseCase
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -13,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -20,7 +23,9 @@ import javax.inject.Inject
 @HiltViewModel
 class ProductosViewModel @Inject constructor(
     private val getProductosUseCase: GetProductosUseCase,
-    private val searchProductosUseCase: SearchProductosUseCase
+    private val searchProductosUseCase: SearchProductosUseCase,
+    private val carritoRepository: CarritoRepository,
+    private val preferencesManager: PreferencesManager
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ProductosState())
@@ -31,6 +36,7 @@ class ProductosViewModel @Inject constructor(
 
     init {
         onEvent(ProductosEvent.LoadProductos)
+        loadCarrito()
     }
 
     fun onEvent(event: ProductosEvent) {
@@ -216,5 +222,14 @@ class ProductosViewModel @Inject constructor(
 
     fun getCantidadItemsCarrito(): Int {
         return _state.value.carrito.sumOf { it.cantidad }
+    }
+
+    private fun loadCarrito() {
+        viewModelScope.launch {
+            val usuarioId = preferencesManager.getUserId().first() ?: return@launch
+            carritoRepository.getCarrito(usuarioId).collect { items ->
+                _state.update { it.copy(carrito = items) }
+            }
+        }
     }
 }
