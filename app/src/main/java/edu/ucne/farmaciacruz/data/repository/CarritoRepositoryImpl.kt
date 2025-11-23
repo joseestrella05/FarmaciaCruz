@@ -1,7 +1,8 @@
 package edu.ucne.farmaciacruz.data.repository
 
 import edu.ucne.farmaciacruz.data.local.dao.CarritoDao
-import edu.ucne.farmaciacruz.data.local.entity.CarritoEntity
+import edu.ucne.farmaciacruz.data.mapper.toCarritoEntity
+import edu.ucne.farmaciacruz.data.mapper.toDomain
 import edu.ucne.farmaciacruz.domain.model.CarritoItem
 import edu.ucne.farmaciacruz.domain.model.Producto
 import edu.ucne.farmaciacruz.domain.repository.CarritoRepository
@@ -12,72 +13,51 @@ import javax.inject.Singleton
 
 @Singleton
 class CarritoRepositoryImpl @Inject constructor(
-    private val carritoDao: CarritoDao
+    private val dao: CarritoDao
 ) : CarritoRepository {
 
     override fun getCarrito(usuarioId: Int): Flow<List<CarritoItem>> {
-        return carritoDao.getCarritoByUsuario(usuarioId).map { entities ->
-            entities.map { it.toCarritoItem() }
+        return dao.getCarritoByUsuario(usuarioId).map { list ->
+            list.map { it.toDomain() }
         }
     }
 
     override suspend fun addToCarrito(usuarioId: Int, producto: Producto) {
-        val existingItem = carritoDao.getCarritoItem(usuarioId, producto.id)
+        val item = dao.getCarritoItem(usuarioId, producto.id)
 
-        if (existingItem != null) {
-            carritoDao.updateCarritoItem(
-                existingItem.copy(cantidad = existingItem.cantidad + 1)
-            )
+        if (item == null) {
+            dao.insertCarritoItem(producto.toCarritoEntity(usuarioId))
         } else {
-            carritoDao.insertCarritoItem(
-                CarritoEntity(
-                    usuarioId = usuarioId,
-                    productoId = producto.id,
-                    cantidad = 1,
-                    nombre = producto.nombre,
-                    categoria = producto.categoria,
-                    descripcion = producto.descripcion,
-                    precio = producto.precio,
-                    imagenUrl = producto.imagenUrl
-                )
+            dao.updateCarritoItem(
+                item.copy(cantidad = item.cantidad + 1)
             )
         }
     }
 
-    override suspend fun updateQuantity(usuarioId: Int, productoId: Int, cantidad: Int) {
-        val item = carritoDao.getCarritoItem(usuarioId, productoId)
-        if (item != null) {
-            if (cantidad <= 0) {
-                carritoDao.deleteCarritoItem(item)
-            } else {
-                carritoDao.updateCarritoItem(item.copy(cantidad = cantidad))
-            }
+    override suspend fun addToCarrito(usuarioId: Int, producto: Producto, cantidad: Int) {
+        val item = dao.getCarritoItem(usuarioId, producto.id)
+
+        if (item == null) {
+            dao.insertCarritoItem(producto.toCarritoEntity(usuarioId, cantidad))
+        } else {
+            dao.updateCarritoItem(
+                item.copy(cantidad = item.cantidad + cantidad)
+            )
         }
     }
 
     override suspend fun removeFromCarrito(usuarioId: Int, productoId: Int) {
-        carritoDao.deleteByProductoId(usuarioId, productoId)
+        dao.deleteByProductoId(usuarioId, productoId)
     }
 
-    override suspend fun clearCarrito(usuarioId: Int) {
-        carritoDao.clearCarrito(usuarioId)
+    override suspend fun updateCantidad(usuarioId: Int, productoId: Int, cantidad: Int) {
+        val item = dao.getCarritoItem(usuarioId, productoId)
+        if (item != null) {
+            dao.updateCarritoItem(item.copy(cantidad = cantidad))
+        }
     }
 
     override fun getTotalItems(usuarioId: Int): Flow<Int> {
-        return carritoDao.getTotalItems(usuarioId).map { it ?: 0 }
-    }
-
-    private fun CarritoEntity.toCarritoItem(): CarritoItem {
-        return CarritoItem(
-            producto = Producto(
-                id = productoId,
-                nombre = nombre,
-                categoria = categoria,
-                descripcion = descripcion,
-                precio = precio,
-                imagenUrl = imagenUrl
-            ),
-            cantidad = cantidad
-        )
+        return dao.getTotalItems(usuarioId).map { it ?: 0 }
     }
 }
