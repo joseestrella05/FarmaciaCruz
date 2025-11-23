@@ -35,11 +35,4 @@ object DatabaseModule {
         return database.carritoDao()
     }
 
-    @Provides
-    @Singleton
-    fun provideCarritoRepository(
-        carritoDao: CarritoDao
-    ): CarritoRepository {
-        return CarritoRepositoryImpl(carritoDao)
-    }
 }
