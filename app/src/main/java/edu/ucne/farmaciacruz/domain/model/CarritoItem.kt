@@ -2,7 +2,7 @@ package edu.ucne.farmaciacruz.domain.model
 
 data class CarritoItem(
     val producto: Producto,
-    var cantidad: Int = 1
+    val cantidad: Int = 1
 ) {
     val subtotal: Double
         get() = producto.precio * cantidad
