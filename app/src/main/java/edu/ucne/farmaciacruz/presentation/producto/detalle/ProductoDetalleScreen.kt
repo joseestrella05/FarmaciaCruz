@@ -222,7 +222,7 @@ private fun ProductoDetalleContent(
                 ) {
                     IconButton(
                         onClick = {
-                            onEvent(ProductoDetalleEvent.UpdateQuantity(state.cantidad - 1))
+                            ProductoDetalleEvent.UpdateCantidad(state.cantidad - 1)
                         },
                         enabled = state.cantidad > 1
                     ) {
@@ -243,7 +243,7 @@ private fun ProductoDetalleContent(
 
                     IconButton(
                         onClick = {
-                            onEvent(ProductoDetalleEvent.UpdateQuantity(state.cantidad + 1))
+                            ProductoDetalleEvent.UpdateCantidad(state.cantidad + 1)
                         }
                     ) {
                         Icon(Icons.Default.Add, contentDescription = "Aumentar")

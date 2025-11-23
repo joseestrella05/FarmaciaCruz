@@ -4,13 +4,12 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import edu.ucne.farmaciacruz.data.local.PreferencesManager
 import edu.ucne.farmaciacruz.domain.model.Resource
-import edu.ucne.farmaciacruz.domain.repository.CarritoRepository
+import edu.ucne.farmaciacruz.domain.usecase.carrito.AddToCarritoWithCantidadUseCase
+import edu.ucne.farmaciacruz.domain.usecase.preference.GetUserIdUseCase
 import edu.ucne.farmaciacruz.domain.usecase.producto.GetProductoPorIdUseCase
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
@@ -18,16 +17,22 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+sealed class ProductoDetalleUiEvent {
+    data class ShowSuccess(val message: String) : ProductoDetalleUiEvent()
+    data class ShowError(val message: String) : ProductoDetalleUiEvent()
+    object NavigateBack : ProductoDetalleUiEvent()
+}
+
 @HiltViewModel
 class ProductoDetalleViewModel @Inject constructor(
     private val getProductoPorIdUseCase: GetProductoPorIdUseCase,
-    private val carritoRepository: CarritoRepository,
-    private val preferencesManager: PreferencesManager,
+    private val addToCarritoWithCantidadUseCase: AddToCarritoWithCantidadUseCase,
+    private val getUserIdUseCase: GetUserIdUseCase,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ProductoDetalleState())
-    val state: StateFlow<ProductoDetalleState> = _state.asStateFlow()
+    val state = _state.asStateFlow()
 
     private val _uiEvent = MutableSharedFlow<ProductoDetalleUiEvent>()
     val uiEvent = _uiEvent.asSharedFlow()
@@ -35,26 +40,17 @@ class ProductoDetalleViewModel @Inject constructor(
     private val productoId: Int = checkNotNull(savedStateHandle["productoId"])
 
     init {
-        onEvent(ProductoDetalleEvent.LoadProducto(productoId))
+        loadProducto()
     }
 
-    fun onEvent(event: ProductoDetalleEvent) {
-        when (event) {
-            is ProductoDetalleEvent.LoadProducto -> handleLoadProducto(event.productoId)
-            is ProductoDetalleEvent.AddToCart -> handleAddToCart()
-            is ProductoDetalleEvent.UpdateQuantity -> handleUpdateQuantity(event.cantidad)
-            is ProductoDetalleEvent.NavigateBack -> handleNavigateBack()
-        }
-    }
-
-    private fun handleLoadProducto(productoId: Int) {
+    private fun loadProducto() {
         viewModelScope.launch {
             getProductoPorIdUseCase(productoId).collect { result ->
                 when (result) {
-                    is Resource.Loading -> {
+                    is Resource.Loading ->
                         _state.update { it.copy(isLoading = true, error = null) }
-                    }
-                    is Resource.Success -> {
+
+                    is Resource.Success ->
                         _state.update {
                             it.copy(
                                 isLoading = false,
@@ -62,52 +58,62 @@ class ProductoDetalleViewModel @Inject constructor(
                                 error = null
                             )
                         }
-                    }
+
                     is Resource.Error -> {
                         _state.update {
-                            it.copy(
-                                isLoading = false,
-                                error = result.message
-                            )
+                            it.copy(isLoading = false, error = result.message)
                         }
-                        _uiEvent.emit(ProductoDetalleUiEvent.ShowError(result.message ?: "Error desconocido"))
+                        _uiEvent.emit(
+                            ProductoDetalleUiEvent.ShowError(
+                                result.message ?: "Error desconocido"
+                            )
+                        )
                     }
                 }
             }
         }
     }
 
-    private fun handleAddToCart() {
-        val producto = _state.value.producto ?: return
-
-        viewModelScope.launch {
-            try {
-                val usuarioId = preferencesManager.getUserId().first() ?: return@launch
-
-                repeat(_state.value.cantidad) {
-                    carritoRepository.addToCarrito(usuarioId, producto)
-                }
-
-                _uiEvent.emit(
-                    ProductoDetalleUiEvent.ShowSuccess(
-                        "${_state.value.cantidad} ${producto.nombre} agregado(s) al carrito"
-                    )
-                )
-
-                _state.update { it.copy(cantidad = 1) }
-            } catch (e: Exception) {
-                _uiEvent.emit(ProductoDetalleUiEvent.ShowError("Error al agregar al carrito"))
-            }
+    fun onEvent(event: ProductoDetalleEvent) {
+        when (event) {
+            is ProductoDetalleEvent.UpdateCantidad -> updateCantidad(event.cantidad)
+            ProductoDetalleEvent.AddToCart -> addToCarrito()
+            ProductoDetalleEvent.NavigateBack -> navigateBack()
         }
     }
 
-    private fun handleUpdateQuantity(cantidad: Int) {
+    private fun updateCantidad(cantidad: Int) {
         if (cantidad > 0) {
             _state.update { it.copy(cantidad = cantidad) }
         }
     }
 
-    private fun handleNavigateBack() {
+    private fun addToCarrito() = viewModelScope.launch {
+        val producto = _state.value.producto ?: return@launch
+        val cantidad = _state.value.cantidad
+
+        val usuarioId = getUserIdUseCase().first() ?: run {
+            _uiEvent.emit(ProductoDetalleUiEvent.ShowError("Usuario no identificado"))
+            return@launch
+        }
+
+        try {
+            addToCarritoWithCantidadUseCase(usuarioId, producto, cantidad)
+
+            _uiEvent.emit(
+                ProductoDetalleUiEvent.ShowSuccess(
+                    "$cantidad ${producto.nombre} agregado(s) al carrito"
+                )
+            )
+
+            _state.update { it.copy(cantidad = 1) }
+
+        } catch (e: Exception) {
+            _uiEvent.emit(ProductoDetalleUiEvent.ShowError("Error al agregar al carrito"))
+        }
+    }
+
+    private fun navigateBack() {
         viewModelScope.launch {
             _uiEvent.emit(ProductoDetalleUiEvent.NavigateBack)
         }

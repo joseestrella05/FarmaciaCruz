@@ -72,7 +72,7 @@ fun ProductosScreen(
     ProductosScreenContent(
         state = state,
         snackbarHostState = snackbarHostState,
-        cantidadCarrito = viewModel.getCantidadItemsCarrito(),
+        cantidadCarrito = state.carrito.sumOf { it.cantidad },
         onEvent = viewModel::onEvent,
         onCarritoClick = { showCarritoSheet = true },
         onConfigClick = onConfigClick
