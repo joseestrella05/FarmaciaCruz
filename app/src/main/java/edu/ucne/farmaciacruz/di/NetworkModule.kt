@@ -71,14 +71,17 @@ object NetworkModule {
         return retrofit.create(ApiService::class.java)
     }
 
+    @Provides
+    @Singleton
+    fun provideCarritoRepository(
+        carritoDao: CarritoDao
+    ): CarritoRepository {
+        return CarritoRepositoryImpl(carritoDao)
+    }
+
+    @Provides
     @Singleton
     fun providePreferencesRepository(
         prefs: PreferencesManager
     ): PreferencesRepository = PreferencesRepositoryImpl(prefs)
-
-    @Provides
-    @Singleton
-    fun provideCarritoRepository(
-        dao: CarritoDao
-    ): CarritoRepository = CarritoRepositoryImpl(dao)
 }
