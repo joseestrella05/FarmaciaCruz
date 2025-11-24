@@ -1,6 +1,8 @@
 package edu.ucne.farmaciacruz.data.remote.api
 
 import edu.ucne.farmaciacruz.data.remote.dto.AuthResponseDto
+import edu.ucne.farmaciacruz.data.remote.dto.CreateOrderDto
+import edu.ucne.farmaciacruz.data.remote.dto.OrderResponseDto
 import edu.ucne.farmaciacruz.data.remote.dto.ProductoDto
 import edu.ucne.farmaciacruz.data.remote.dto.UsuarioDto
 import edu.ucne.farmaciacruz.data.remote.request.ChangePasswordRequest
@@ -9,6 +11,7 @@ import edu.ucne.farmaciacruz.data.remote.request.LoginRequest
 import edu.ucne.farmaciacruz.data.remote.request.RecoveryRequest
 import edu.ucne.farmaciacruz.data.remote.request.RefreshTokenRequest
 import edu.ucne.farmaciacruz.data.remote.request.RegisterRequest
+import edu.ucne.farmaciacruz.data.remote.request.UpdateOrderStatusRequest
 import edu.ucne.farmaciacruz.data.remote.request.UpdateProfileRequest
 import retrofit2.http.Body
 import retrofit2.http.DELETE
@@ -62,4 +65,19 @@ interface ApiService {
 
     @DELETE("api/Productos/{id}")
     suspend fun deleteProducto(@Path("id") id: Int): Response<Unit>
+
+    @POST("api/Orders")
+    suspend fun createOrder(@Body order: CreateOrderDto): Response<ApiResponse<OrderResponseDto>>
+
+    @GET("api/Orders/{id}")
+    suspend fun getOrder(@Path("id") orderId: Int): Response<ApiResponse<OrderResponseDto>>
+
+    @GET("api/Orders/usuario/{usuarioId}")
+    suspend fun getUserOrders(@Path("usuarioId") usuarioId: Int): Response<List<OrderResponseDto>>
+
+    @PUT("api/Orders/{id}/estado")
+    suspend fun updateOrderStatus(
+        @Path("id") orderId: Int,
+        @Body status: UpdateOrderStatusRequest
+    ): Response<Unit>
 }
