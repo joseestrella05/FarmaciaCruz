@@ -57,7 +57,7 @@ fun List<Producto>.toDto(): List<ProductoDto> {
 fun CarritoEntity.toDomain(): CarritoItem {
     return CarritoItem(
         producto = Producto(
-            id = this.productoId,          // ✅ Producto usa "id"
+            id = this.productoId,
             nombre = this.nombre,
             categoria = this.categoria,
             descripcion = this.descripcion,
