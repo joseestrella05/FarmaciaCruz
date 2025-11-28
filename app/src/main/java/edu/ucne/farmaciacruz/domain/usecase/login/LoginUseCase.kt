@@ -12,7 +12,7 @@ import javax.inject.Inject
 class LoginUseCase @Inject constructor(
     private val authRepository: AuthRepository
 ) {
-    suspend operator fun invoke(email: String, password: String): Flow<Resource<User>> {
+     operator fun invoke(email: String, password: String): Flow<Resource<User>> {
         if (email.isBlank()) {
             return flow {
                 emit(Resource.Error("El email es requerido"))

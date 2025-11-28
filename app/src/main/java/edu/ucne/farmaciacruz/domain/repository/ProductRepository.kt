@@ -5,10 +5,10 @@ import edu.ucne.farmaciacruz.domain.model.Resource
 import kotlinx.coroutines.flow.Flow
 
 interface ProductRepository {
-    suspend fun getProductos(): Flow<Resource<List<Producto>>>
-    suspend fun getProducto(id: Int): Flow<Resource<Producto>>
-    suspend fun getProductosPorCategoria(categoria: String): Flow<Resource<List<Producto>>>
-    suspend fun searchProductos(query: String): Flow<Resource<List<Producto>>>
+    fun getProductos(): Flow<Resource<List<Producto>>>
+    fun getProducto(id: Int): Flow<Resource<Producto>>
+    fun getProductosPorCategoria(categoria: String): Flow<Resource<List<Producto>>>
+    fun searchProductos(query: String): Flow<Resource<List<Producto>>>
     suspend fun getCategorias(): Flow<Resource<List<String>>>
     suspend fun createProducto(
         nombre: String,

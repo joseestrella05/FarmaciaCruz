@@ -7,13 +7,12 @@ import edu.ucne.farmaciacruz.domain.model.Resource
 import kotlinx.coroutines.flow.Flow
 
 interface PaymentRepository {
-    suspend fun createPayPalOrder(
+    fun createPayPalOrder(
         usuarioId: Int,
         items: List<CarritoItem>,
         total: Double
     ): Flow<Resource<String>>
-
-    suspend fun capturePayPalPayment(
+    fun capturePayPalPayment(
         paypalOrderId: String,
         localOrderId: String
     ): Flow<Resource<PaymentResult>>
@@ -35,5 +34,5 @@ interface PaymentRepository {
         paypalPayerId: String? = null
     )
 
-    suspend fun syncOrders(): Flow<Resource<Unit>>
+    fun syncOrders(): Flow<Resource<Unit>>
 }

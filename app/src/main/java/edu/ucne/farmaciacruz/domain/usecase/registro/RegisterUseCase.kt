@@ -9,7 +9,7 @@ import javax.inject.Inject
 class RegisterUseCase @Inject constructor(
     private val authRepository: AuthRepository
 ) {
-    suspend operator fun invoke(
+     operator fun invoke(
         email: String,
         password: String,
         nombre: String,

@@ -9,7 +9,7 @@ import javax.inject.Inject
 class GetProductoPorIdUseCase @Inject constructor(
     private val productRepository: ProductRepository
 ) {
-    suspend operator fun invoke(id: Int): Flow<Resource<Producto>> {
+    operator fun invoke(id: Int): Flow<Resource<Producto>> {
         return productRepository.getProducto(id)
     }
 }

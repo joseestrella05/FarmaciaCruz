@@ -5,11 +5,11 @@ import edu.ucne.farmaciacruz.domain.model.User
 import kotlinx.coroutines.flow.Flow
 
 interface AuthRepository {
-    suspend fun login(email: String, password: String): Flow<Resource<User>>
+    fun login(email: String, password: String): Flow<Resource<User>>
     suspend fun logout()
     fun isLoggedIn(): Flow<Boolean>
     fun getUserData(): Flow<User?>
-    suspend fun register(
+    fun register(
         email: String,
         password: String,
         nombre: String,
@@ -17,5 +17,5 @@ interface AuthRepository {
         telefono: String?
     ): Flow<Resource<User>>
 
-    suspend fun recoveryPassword(email: String): Flow<Resource<Unit>>
+    fun recoveryPassword(email: String): Flow<Resource<Unit>>
 }

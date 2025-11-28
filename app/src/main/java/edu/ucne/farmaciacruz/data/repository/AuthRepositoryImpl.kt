@@ -23,7 +23,7 @@ class AuthRepositoryImpl @Inject constructor(
     private val preferencesManager: PreferencesManager
 ) : AuthRepository {
 
-    override suspend fun login(email: String, password: String): Flow<Resource<User>> = flow {
+    override fun login(email: String, password: String): Flow<Resource<User>> = flow {
         try {
             emit(Resource.Loading())
 
@@ -70,7 +70,7 @@ class AuthRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun register(
+    override fun register(
         email: String,
         password: String,
         nombre: String,
@@ -171,7 +171,7 @@ class AuthRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun recoveryPassword(email: String): Flow<Resource<Unit>> = flow {
+    override fun recoveryPassword(email: String): Flow<Resource<Unit>> = flow {
         emit(Resource.Loading())
 
         val request = RecoveryRequest(email)

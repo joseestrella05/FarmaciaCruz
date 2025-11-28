@@ -9,7 +9,7 @@ import javax.inject.Inject
 class CreatePayPalOrderUseCase @Inject constructor(
     private val repository: PaymentRepository
 ) {
-    suspend operator fun invoke(
+     operator fun invoke(
         usuarioId: Int,
         items: List<CarritoItem>,
         total: Double

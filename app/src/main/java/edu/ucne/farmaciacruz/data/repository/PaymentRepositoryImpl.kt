@@ -34,7 +34,7 @@ class PaymentRepositoryImpl @Inject constructor(
         private const val TAG = "PaymentRepository"
     }
 
-    override suspend fun createPayPalOrder(
+    override fun createPayPalOrder(
         usuarioId: Int,
         items: List<CarritoItem>,
         total: Double
@@ -102,7 +102,7 @@ class PaymentRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun capturePayPalPayment(
+    override fun capturePayPalPayment(
         paypalOrderId: String,
         localOrderId: String
     ): Flow<Resource<PaymentResult>> = flow {
@@ -233,7 +233,7 @@ class PaymentRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun syncOrders(): Flow<Resource<Unit>> = flow {
+    override fun syncOrders(): Flow<Resource<Unit>> = flow {
         try {
             emit(Resource.Loading())
 

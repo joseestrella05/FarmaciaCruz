@@ -18,7 +18,7 @@ class ProductRepositoryImpl @Inject constructor(
     private val apiService: ApiService
 ) : ProductRepository {
 
-    override suspend  fun getProductos(): Flow<Resource<List<Producto>>> = flow {
+    override fun getProductos(): Flow<Resource<List<Producto>>> = flow {
         try {
             emit(Resource.Loading())
 
@@ -46,7 +46,7 @@ class ProductRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun getProducto(id: Int): Flow<Resource<Producto>> = flow {
+    override fun getProducto(id: Int): Flow<Resource<Producto>> = flow {
         try {
             emit(Resource.Loading())
 
@@ -73,7 +73,7 @@ class ProductRepositoryImpl @Inject constructor(
     }
 
 
-    override  suspend fun getProductosPorCategoria(categoria: String): Flow<Resource<List<Producto>>> = flow {
+    override fun getProductosPorCategoria(categoria: String): Flow<Resource<List<Producto>>> = flow {
         try {
             emit(Resource.Loading())
 
@@ -94,7 +94,7 @@ class ProductRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun searchProductos(query: String): Flow<Resource<List<Producto>>> = flow {
+    override fun searchProductos(query: String): Flow<Resource<List<Producto>>> = flow {
         try {
             emit(Resource.Loading())
 

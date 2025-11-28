@@ -8,7 +8,7 @@ import javax.inject.Inject
 class SyncPaymentOrdersUseCase @Inject constructor(
     private val repository: PaymentRepository
 ) {
-    suspend operator fun invoke(): Flow<Resource<Unit>> {
+    operator fun invoke(): Flow<Resource<Unit>> {
         return repository.syncOrders()
     }
 }
