@@ -1,10 +1,10 @@
-package edu.ucne.farmaciacruz.presentation.ordenes
+package edu.ucne.farmaciacruz.presentation.order
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import edu.ucne.farmaciacruz.domain.model.PaymentOrder
-import edu.ucne.farmaciacruz.domain.usecase.payment.GetUserOrdersUseCase
+import edu.ucne.farmaciacruz.domain.model.Resource
+import edu.ucne.farmaciacruz.domain.usecase.order.GetUserOrdersUseCase
 import edu.ucne.farmaciacruz.domain.usecase.preference.GetUserIdUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,12 +32,28 @@ class MisOrdenesViewModel @Inject constructor(
 
             val usuarioId = getUserIdUseCase().first() ?: return@launch
 
-            getUserOrdersUseCase(usuarioId).collect { orders ->
-                _state.update {
-                    it.copy(
-                        ordenes = orders,
-                        isLoading = false
-                    )
+            getUserOrdersUseCase(usuarioId).collect { result ->
+                when (result) {
+                    is Resource.Loading -> {
+                        _state.update { it.copy(isLoading = true) }
+                    }
+                    is Resource.Success -> {
+                        _state.update {
+                            it.copy(
+                                ordenes = result.data ?: emptyList(),
+                                isLoading = false,
+                                error = null
+                            )
+                        }
+                    }
+                    is Resource.Error -> {
+                        _state.update {
+                            it.copy(
+                                isLoading = false,
+                                error = result.message
+                            )
+                        }
+                    }
                 }
             }
 
