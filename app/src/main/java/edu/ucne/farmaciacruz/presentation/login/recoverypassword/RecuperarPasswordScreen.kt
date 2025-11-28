@@ -22,11 +22,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import edu.ucne.farmaciacruz.R
 import edu.ucne.farmaciacruz.ui.theme.onPrimaryContainerDarkHighContrast
 
-sealed class RecuperarPasswordUiEvent {
-    data class ShowError(val message: String) : RecuperarPasswordUiEvent()
-    data class ShowSuccess(val message: String) : RecuperarPasswordUiEvent()
-    data object NavigateToLogin : RecuperarPasswordUiEvent()
-}
 @Composable
 fun RecuperarPasswordScreen(
     onBackToLogin: () -> Unit,
