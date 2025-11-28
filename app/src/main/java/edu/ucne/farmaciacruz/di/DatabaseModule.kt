@@ -12,8 +12,6 @@ import dagger.hilt.components.SingletonComponent
 import edu.ucne.farmaciacruz.data.local.FarmaciaDatabase
 import edu.ucne.farmaciacruz.data.local.dao.CarritoDao
 import edu.ucne.farmaciacruz.data.local.dao.PaymentOrderDao
-import edu.ucne.farmaciacruz.data.repository.CarritoRepositoryImpl
-import edu.ucne.farmaciacruz.domain.repository.CarritoRepository
 import javax.inject.Singleton
 
 @Module
