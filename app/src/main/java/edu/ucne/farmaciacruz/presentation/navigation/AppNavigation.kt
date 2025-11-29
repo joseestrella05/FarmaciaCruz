@@ -11,6 +11,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import edu.ucne.farmaciacruz.data.local.PreferencesManager
+import edu.ucne.farmaciacruz.presentation.admin.dashboard.AdminDashboardScreen
 import edu.ucne.farmaciacruz.presentation.checkout.CheckoutScreen
 import edu.ucne.farmaciacruz.presentation.configuracion.ConfiguracionScreen
 import edu.ucne.farmaciacruz.presentation.login.LoginScreen
@@ -132,6 +133,14 @@ fun AppNavigation(
                 onBackToLogin = {
                     navController.popBackStack()
                 }
+            )
+        }
+        composable<AdminDashboardRoute> {
+            AdminDashboardScreen(
+                onNavigateToProductos = { navController.navigate(AdminProductosRoute) },
+                onNavigateToUsuarios = { navController.navigate(AdminUsuariosRoute) },
+                onNavigateToOrdenes = { navController.navigate(AdminOrdenesRoute) },
+                onBack = { navController.popBackStack() }
             )
         }
     }
