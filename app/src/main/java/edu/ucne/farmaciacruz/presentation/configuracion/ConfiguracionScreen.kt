@@ -20,6 +20,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 fun ConfiguracionScreen(
     onBack: () -> Unit,
     onLogout: () -> Unit,
+    onNavigateToAdmin: () -> Unit, // AGREGAR ESTE PARÁMETRO
     viewModel: ConfiguracionViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -68,6 +69,14 @@ fun ConfiguracionScreen(
                 UserCardSection(state)
 
                 Spacer(Modifier.height(24.dp))
+
+                // === SECCIÓN DE ADMINISTRADOR - AGREGAR AQUÍ ===
+                // Solo mostrar si el usuario es administrador
+                if (state.user?.rol == "Administrador") {
+                    AdminSection(onAdminClick = onNavigateToAdmin)
+                    Spacer(Modifier.height(24.dp))
+                }
+                // === FIN SECCIÓN ADMINISTRADOR ===
 
                 ApiConfigSection(
                     apiUrl = state.apiUrl,
@@ -130,6 +139,51 @@ fun ConfiguracionScreen(
         )
     }
 }
+
+// === NUEVA SECCIÓN PARA ADMINISTRADOR ===
+@Composable
+private fun AdminSection(onAdminClick: () -> Unit) {
+    SectionHeader("Administración")
+    Card(
+        onClick = onAdminClick,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer
+        )
+    ) {
+        ListItem(
+            headlineContent = {
+                Text(
+                    "Panel de Administración",
+                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                    fontWeight = FontWeight.SemiBold
+                )
+            },
+            supportingContent = {
+                Text(
+                    "Gestionar productos, usuarios y órdenes",
+                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
+                )
+            },
+            leadingContent = {
+                Icon(
+                    Icons.Default.AdminPanelSettings,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.tertiary,
+                    modifier = Modifier.size(32.dp)
+                )
+            },
+            trailingContent = {
+                Icon(
+                    Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.tertiary
+                )
+            }
+        )
+    }
+}
+
+// === RESTO DE COMPOSABLES (no cambiar) ===
 
 @ExperimentalMaterial3Api
 @Composable

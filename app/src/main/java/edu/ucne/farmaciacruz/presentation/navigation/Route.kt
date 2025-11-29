@@ -31,3 +31,15 @@ object MisOrdenesRoute
 
 @Serializable
 data class OrdenDetalleRoute(val orderId: Int)
+
+@Serializable
+object AdminDashboardRoute
+
+@Serializable
+object AdminProductosRoute
+
+@Serializable
+object AdminUsuariosRoute
+
+@Serializable
+object AdminOrdenesRoute
