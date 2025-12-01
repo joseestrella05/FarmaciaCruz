@@ -3,16 +3,19 @@ package edu.ucne.farmaciacruz.presentation.admin.dashboard
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import edu.ucne.farmaciacruz.data.repository.AdminRepository
 import edu.ucne.farmaciacruz.domain.model.Resource
+import edu.ucne.farmaciacruz.domain.usecase.admin.GetEstadisticasUseCase
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class AdminDashboardViewModel @Inject constructor(
-    private val adminRepository: AdminRepository
+    private val getEstadisticasUseCase: GetEstadisticasUseCase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AdminDashboardState())
@@ -35,7 +38,7 @@ class AdminDashboardViewModel @Inject constructor(
 
     private fun loadStats() {
         viewModelScope.launch {
-            adminRepository.getEstadisticas().collect { result ->
+            getEstadisticasUseCase().collect { result ->
                 when (result) {
                     is Resource.Loading -> {
                         _state.update { it.copy(isLoading = true, error = null) }
@@ -75,7 +78,7 @@ class AdminDashboardViewModel @Inject constructor(
                 AdminTab.PRODUCTOS -> _effect.send(AdminDashboardEffect.NavigateToProductos)
                 AdminTab.USUARIOS -> _effect.send(AdminDashboardEffect.NavigateToUsuarios)
                 AdminTab.ORDENES -> _effect.send(AdminDashboardEffect.NavigateToOrdenes)
-                AdminTab.DASHBOARD -> {} // Ya estamos en dashboard
+                AdminTab.DASHBOARD -> {}
             }
         }
     }
