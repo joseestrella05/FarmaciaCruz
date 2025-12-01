@@ -75,7 +75,7 @@ class AdminRepositoryImpl @Inject constructor(
                         activo = dto.activo,
                         emailConfirmado = dto.emailConfirmado,
                         fechaCreacion = dto.fechaCreacion,
-                        ultimoAcceso = null // Agregar si está disponible
+                        ultimoAcceso = null
                     )
                 }
                 emit(Resource.Success(usuarios))
@@ -159,9 +159,31 @@ class AdminRepositoryImpl @Inject constructor(
         emit(Resource.Loading())
 
         try {
-            // Por ahora retornar lista vacía ya que no tenemos endpoint
-            // Agregar cuando esté disponible en la API
-            emit(Resource.Success(emptyList()))
+            val response = apiService.getAllOrders()
+
+            if (response.isSuccessful && response.body() != null) {
+                val ordenes = response.body()!!.map { dto ->
+                    OrderAdmin(
+                        orderId = dto.orderId,
+                        usuarioId = dto.usuarioId,
+                        usuarioNombre = "Usuario #${dto.usuarioId}",
+                        total = dto.total,
+                        estado = parseOrderStatus(dto.estado),
+                        metodoPago = "PayPal",
+                        cantidadProductos = dto.productos.size,
+                        fechaCreacion = dto.fechaCreacion,
+                        fechaActualizacion = dto.fechaActualizacion
+                    )
+                }
+                emit(Resource.Success(ordenes))
+            } else {
+                val msg = when (response.code()) {
+                    401 -> ErrorMessages.NO_AUTORIZADO
+                    403 -> "No tienes permisos de administrador"
+                    else -> ErrorMessages.ERROR_DESCONOCIDO
+                }
+                emit(Resource.Error(msg))
+            }
 
         } catch (e: Exception) {
             emit(Resource.Error(e.message ?: ErrorMessages.ERROR_DESCONOCIDO))
@@ -195,7 +217,7 @@ class AdminRepositoryImpl @Inject constructor(
             porRol?.associate { item ->
                 val map = item as? Map<*, *>
                 val rol = map?.get("rol") as? String ?: ""
-                val cantidad = map?.get("cantidad") as? Int ?: 0
+                val cantidad = (map?.get("cantidad") as? Number)?.toInt() ?: 0
                 rol to cantidad
             } ?: emptyMap()
         } catch (e: Exception) {
@@ -210,11 +232,19 @@ class AdminRepositoryImpl @Inject constructor(
             porCategoria?.associate { item ->
                 val map = item as? Map<*, *>
                 val categoria = map?.get("categoria") as? String ?: ""
-                val cantidad = map?.get("cantidad") as? Int ?: 0
+                val cantidad = (map?.get("cantidad") as? Number)?.toInt() ?: 0
                 categoria to cantidad
             } ?: emptyMap()
         } catch (e: Exception) {
             emptyMap()
+        }
+    }
+
+    private fun parseOrderStatus(status: String): OrderStatus {
+        return try {
+            OrderStatus.valueOf(status.uppercase())
+        } catch (e: Exception) {
+            OrderStatus.PENDIENTE
         }
     }
 }
