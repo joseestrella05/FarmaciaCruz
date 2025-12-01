@@ -16,7 +16,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import edu.ucne.farmaciacruz.presentation.configuracion.ErrorWithRetry
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -115,9 +114,9 @@ private fun ProductoDetalleContent(
             ProductoDetalleCategoria(producto.categoria)
             ProductoDetalleTitulo(producto.nombre)
             ProductoDetallePrecio(producto.precio, producto.precioFormateado)
-            Divider()
+            HorizontalDivider()
             ProductoDetalleDescripcion(producto.descripcion)
-            Divider()
+            HorizontalDivider()
             ProductoDetalleCantidad(state.cantidad, onEvent)
             ProductoDetalleSubtotal(producto.precio, state.cantidad)
             ProductoDetalleAddToCartButton(onEvent)
@@ -300,5 +299,30 @@ private fun ProductoDetalleAddToCartButton(
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold
         )
+    }
+}
+
+@Composable
+private fun ErrorWithRetry(
+    message: String,
+    onRetry: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            Icons.Default.Error,
+            contentDescription = null,
+            modifier = Modifier.size(48.dp),
+            tint = MaterialTheme.colorScheme.error
+        )
+        Spacer(Modifier.height(16.dp))
+        Text(message)
+        Spacer(Modifier.height(16.dp))
+        Button(onClick = onRetry) {
+            Text("Volver")
+        }
     }
 }
