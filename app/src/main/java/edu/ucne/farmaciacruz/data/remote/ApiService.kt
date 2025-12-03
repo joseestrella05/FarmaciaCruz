@@ -1,28 +1,10 @@
 package edu.ucne.farmaciacruz.data.remote
 
-import edu.ucne.farmaciacruz.data.remote.dto.AuthResponseDto
-import edu.ucne.farmaciacruz.data.remote.dto.ChangePasswordRequest
-import edu.ucne.farmaciacruz.data.remote.dto.CreateOrderDto
-import edu.ucne.farmaciacruz.data.remote.dto.CreateProductoRequest
-import edu.ucne.farmaciacruz.data.remote.dto.LoginRequest
-import edu.ucne.farmaciacruz.data.remote.dto.OrderResponseDto
-import edu.ucne.farmaciacruz.data.remote.dto.ProductoDto
-import edu.ucne.farmaciacruz.data.remote.dto.RecoveryRequest
-import edu.ucne.farmaciacruz.data.remote.dto.RefreshTokenRequest
-import edu.ucne.farmaciacruz.data.remote.dto.RegisterRequest
-import edu.ucne.farmaciacruz.data.remote.dto.UpdateOrderStatusRequest
-import edu.ucne.farmaciacruz.data.remote.dto.UpdateProfileRequest
-import edu.ucne.farmaciacruz.data.remote.dto.UsuarioDto
+import edu.ucne.farmaciacruz.data.remote.dto.*
 import retrofit2.Response
-import retrofit2.http.Body
-import retrofit2.http.DELETE
-import retrofit2.http.GET
-import retrofit2.http.POST
-import retrofit2.http.PUT
-import retrofit2.http.Path
+import retrofit2.http.*
 
 interface ApiService {
-
     @POST("api/Usuarios/login")
     suspend fun login(@Body request: LoginRequest): Response<ApiResponse<AuthResponseDto>>
 
@@ -75,9 +57,39 @@ interface ApiService {
     @GET("api/Orders/usuario/{usuarioId}")
     suspend fun getUserOrders(@Path("usuarioId") usuarioId: Int): Response<List<OrderResponseDto>>
 
+    @GET("api/Orders")
+    suspend fun getAllOrders(): Response<List<OrderResponseDto>>
+
     @PUT("api/Orders/{id}/estado")
     suspend fun updateOrderStatus(
         @Path("id") orderId: Int,
         @Body status: UpdateOrderStatusRequest
     ): Response<Unit>
+
+    @GET("api/Admin/estadisticas")
+    suspend fun getEstadisticas(): Response<ApiResponse<Map<String, Any>>>
+
+    @GET("api/Admin/usuarios")
+    suspend fun getAllUsuarios(): Response<ApiResponse<List<UsuarioReadDto>>>
+
+    @GET("api/Admin/usuarios/{id}")
+    suspend fun getUsuarioById(@Path("id") id: Int): Response<ApiResponse<UsuarioReadDto>>
+
+    @PUT("api/Admin/usuarios/{id}/rol")
+    suspend fun cambiarRolUsuario(
+        @Path("id") id: Int,
+        @Body dto: CambiarRolDto
+    ): Response<ApiResponse<UsuarioReadDto>>
+
+    @PUT("api/Admin/usuarios/{id}/estado")
+    suspend fun cambiarEstadoUsuario(
+        @Path("id") id: Int,
+        @Body dto: CambiarEstadoDto
+    ): Response<ApiResponse<UsuarioReadDto>>
+
+    @DELETE("api/Admin/usuarios/{id}")
+    suspend fun deleteUsuario(@Path("id") id: Int): Response<Unit>
+
+    @POST("api/Admin/usuarios/{id}/desbloquear")
+    suspend fun desbloquearUsuario(@Path("id") id: Int): Response<ApiResponse<UsuarioReadDto>>
 }

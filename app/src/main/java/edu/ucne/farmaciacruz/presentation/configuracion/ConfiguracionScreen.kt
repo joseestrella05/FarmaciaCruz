@@ -20,6 +20,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 fun ConfiguracionScreen(
     onBack: () -> Unit,
     onLogout: () -> Unit,
+    onNavigateToAdmin: () -> Unit,
     viewModel: ConfiguracionViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -68,6 +69,12 @@ fun ConfiguracionScreen(
                 UserCardSection(state)
 
                 Spacer(Modifier.height(24.dp))
+
+                // Sección de Administrador - Solo visible para administradores
+                if (state.user?.rol == "Administrador") {
+                    AdminSection(onAdminClick = onNavigateToAdmin)
+                    Spacer(Modifier.height(24.dp))
+                }
 
                 ApiConfigSection(
                     apiUrl = state.apiUrl,
@@ -131,7 +138,7 @@ fun ConfiguracionScreen(
     }
 }
 
-@ExperimentalMaterial3Api
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ConfigTopBar(onBack: () -> Unit) {
     TopAppBar(
@@ -202,6 +209,48 @@ private fun UserCardSection(state: ConfiguracionState) {
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun AdminSection(onAdminClick: () -> Unit) {
+    SectionHeader("Administración")
+    Card(
+        onClick = onAdminClick,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer
+        )
+    ) {
+        ListItem(
+            headlineContent = {
+                Text(
+                    "Panel de Administración",
+                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                    fontWeight = FontWeight.SemiBold
+                )
+            },
+            supportingContent = {
+                Text(
+                    "Gestionar productos, usuarios y órdenes",
+                    color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.7f)
+                )
+            },
+            leadingContent = {
+                Icon(
+                    Icons.Default.AdminPanelSettings,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.tertiary,
+                    modifier = Modifier.size(32.dp)
+                )
+            },
+            trailingContent = {
+                Icon(
+                    Icons.Default.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.tertiary
+                )
+            }
+        )
     }
 }
 
@@ -290,6 +339,7 @@ private fun FooterSection() {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         HorizontalDivider()
+        Spacer(Modifier.height(16.dp))
         Text(
             "Farmacia Cruz App",
             style = MaterialTheme.typography.labelLarge,
@@ -300,6 +350,38 @@ private fun FooterSection() {
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
         )
+    }
+}
+
+@Composable
+private fun SectionHeader(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleMedium,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier.padding(bottom = 8.dp)
+    )
+}
+
+@Composable
+private fun ErrorWithRetry(message: String, onRetry: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(
+            Icons.Default.Error,
+            contentDescription = null,
+            modifier = Modifier.size(48.dp),
+            tint = MaterialTheme.colorScheme.error
+        )
+        Spacer(Modifier.height(16.dp))
+        Text(message)
+        Spacer(Modifier.height(16.dp))
+        Button(onClick = onRetry) {
+            Text("Volver")
+        }
     }
 }
 
@@ -354,13 +436,19 @@ private fun LogoutDialog(
             Button(
                 onClick = onConfirm,
                 enabled = !isLoading,
-                colors = ButtonDefaults.buttonColors(MaterialTheme.colorScheme.error)
-            ) {
-                if (isLoading) CircularProgressIndicator(
-                    modifier = Modifier.size(16.dp),
-                    strokeWidth = 2.dp
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error
                 )
-                else Text("Cerrar Sesión")
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onError
+                    )
+                } else {
+                    Text("Cerrar Sesión")
+                }
             }
         },
         dismissButton = {
@@ -369,45 +457,4 @@ private fun LogoutDialog(
             }
         }
     )
-}
-
-@Composable
-private fun SectionHeader(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier.padding(bottom = 8.dp)
-    )
-}
-
-@Composable
-fun ErrorWithRetry(
-    message: String,
-    onRetry: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Icon(
-            imageVector = Icons.Default.Error,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.error,
-            modifier = Modifier.size(64.dp)
-        )
-
-        Text(
-            text = message,
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.error
-        )
-
-        Button(onClick = onRetry) {
-            Text("Reintentar")
-        }
-    }
 }
