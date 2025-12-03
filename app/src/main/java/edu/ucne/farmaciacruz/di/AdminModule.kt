@@ -10,7 +10,7 @@ import javax.inject.Singleton
 
 @Module
 @InstallIn(SingletonComponent::class)
-interface AdminModule {
+fun interface AdminModule {
 
     @Binds
     @Singleton
