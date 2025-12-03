@@ -9,10 +9,7 @@ import edu.ucne.farmaciacruz.domain.usecase.admin.CambiarRolUsuarioUseCase
 import edu.ucne.farmaciacruz.domain.usecase.admin.DeleteUsuarioUseCase
 import edu.ucne.farmaciacruz.domain.usecase.admin.GetAllUsuariosUseCase
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.receiveAsFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -34,7 +31,7 @@ class AdminUsuariosViewModel @Inject constructor(
         onEvent(AdminUsuariosEvent.LoadUsuarios)
     }
 
-    fun onEvent(event: AdminUsuariosUiEvent) {
+    fun onEvent(event: AdminUsuariosEvent) {
         when (event) {
 
             AdminUsuariosEvent.LoadUsuarios ->
@@ -100,48 +97,8 @@ class AdminUsuariosViewModel @Inject constructor(
 
             AdminUsuariosEvent.Refresh ->
                 loadUsuarios()
-
-            is AdminUsuariosUiEvent.ShowError -> {
-                viewModelScope.launch {
-                    sendUiEvent(event)
-                }
-            }
-
-            is AdminUsuariosUiEvent.ShowSuccess -> {
-                viewModelScope.launch {
-                    sendUiEvent(event)
-                }
-            }
         }
     }
-
-    private suspend fun handleUsuarioMutationResult(
-        result: Resource<Unit>,
-        successMessage: String,
-        defaultErrorMessage: String
-    ) {
-        when (result) {
-            is Resource.Loading -> {
-                _state.update { it.copy(isLoading = true) }
-            }
-
-            is Resource.Success -> {
-                _state.update { it.copy(isLoading = false) }
-                _uiEvent.send(AdminUsuariosUiEvent.ShowSuccess(successMessage))
-                loadUsuarios()
-            }
-
-            is Resource.Error -> {
-                _state.update { it.copy(isLoading = false) }
-                _uiEvent.send(
-                    AdminUsuariosUiEvent.ShowError(
-                        result.message ?: defaultErrorMessage
-                    )
-                )
-            }
-        }
-    }
-
 
     private fun reduce(block: (AdminUsuariosState) -> AdminUsuariosState) {
         _state.update(block)
@@ -153,8 +110,9 @@ class AdminUsuariosViewModel @Inject constructor(
 
     private fun loadUsuarios() {
         viewModelScope.launch {
-            getAllUsuariosUseCase().collect { r ->
-                when (r) {
+            getAllUsuariosUseCase().collect { result ->
+                when (result) {
+
                     is Resource.Loading ->
                         reduce { it.copy(isLoading = true) }
 
@@ -162,7 +120,7 @@ class AdminUsuariosViewModel @Inject constructor(
                         reduce {
                             it.copy(
                                 isLoading = false,
-                                usuarios = r.data.orEmpty()
+                                usuarios = result.data.orEmpty()
                             )
                         }
                         applyFilters()
@@ -170,7 +128,7 @@ class AdminUsuariosViewModel @Inject constructor(
 
                     is Resource.Error -> {
                         reduce { it.copy(isLoading = false) }
-                        sendUiEvent(AdminUsuariosUiEvent.ShowError(r.message ?: "Error"))
+                        sendUiEvent(AdminUsuariosUiEvent.ShowError(result.message ?: "Error"))
                     }
                 }
             }
@@ -178,21 +136,20 @@ class AdminUsuariosViewModel @Inject constructor(
     }
 
     private fun applyFilters() {
-        val stateValue = _state.value
-        val filtered = stateValue.usuarios.filter { usuario ->
+        val s = _state.value
+
+        val filtered = s.usuarios.filter { usuario ->
 
             val matchesSearch =
-                stateValue.searchQuery.isBlank() ||
-                        usuario.nombreCompleto.contains(stateValue.searchQuery, ignoreCase = true) ||
-                        usuario.email.contains(stateValue.searchQuery, ignoreCase = true)
+                s.searchQuery.isBlank() ||
+                        usuario.nombreCompleto.contains(s.searchQuery, true) ||
+                        usuario.email.contains(s.searchQuery, true)
 
             val matchesRol =
-                stateValue.selectedRol == null ||
-                        usuario.rol == stateValue.selectedRol
+                s.selectedRol == null || usuario.rol == s.selectedRol
 
             val matchesEstado =
-                stateValue.selectedEstado == null ||
-                        usuario.activo == stateValue.selectedEstado
+                s.selectedEstado == null || usuario.activo == s.selectedEstado
 
             matchesSearch && matchesRol && matchesEstado
         }
@@ -200,26 +157,50 @@ class AdminUsuariosViewModel @Inject constructor(
         reduce { it.copy(usuariosFiltrados = filtered) }
     }
 
-    private fun cambiarRol(usuarioId: Int, nuevoRol: String) {
+    private suspend fun handleMutation(
+        result: Resource<Unit>,
+        successMsg: String,
+        errorMsg: String
+    ) {
+        when (result) {
+
+            is Resource.Loading ->
+                reduce { it.copy(isLoading = true) }
+
+            is Resource.Success -> {
+                reduce { it.copy(isLoading = false) }
+                sendUiEvent(AdminUsuariosUiEvent.ShowSuccess(successMsg))
+                loadUsuarios()
+            }
+
+            is Resource.Error -> {
+                reduce { it.copy(isLoading = false) }
+                sendUiEvent(AdminUsuariosUiEvent.ShowError(result.message ?: errorMsg))
+            }
+        }
+    }
+
+    private fun cambiarRol(id: Int, rol: String) {
         viewModelScope.launch {
-            cambiarRolUsuarioUseCase(usuarioId, nuevoRol).collect { result ->
-                handleUsuarioMutationResult(
-                    result = result,
-                    successMessage = "Rol actualizado exitosamente",
-                    defaultErrorMessage = "Error al cambiar rol"
+            cambiarRolUsuarioUseCase(id, rol).collect { result ->
+                handleMutation(
+                    result,
+                    "Rol actualizado exitosamente",
+                    "Error al cambiar rol"
                 )
             }
         }
     }
 
-    private fun toggleEstado(usuarioId: Int, nuevoEstado: Boolean) {
+    private fun toggleEstado(id: Int, activo: Boolean) {
+        val msg = if (activo) "Usuario activado" else "Usuario desactivado"
+
         viewModelScope.launch {
-            cambiarEstadoUsuarioUseCase(usuarioId, nuevoEstado).collect { result ->
-                val mensaje = if (nuevoEstado) "Usuario activado" else "Usuario desactivado"
-                handleUsuarioMutationResult(
-                    result = result,
-                    successMessage = mensaje,
-                    defaultErrorMessage = "Error al cambiar estado"
+            cambiarEstadoUsuarioUseCase(id, activo).collect { result ->
+                handleMutation(
+                    result,
+                    msg,
+                    "Error al cambiar estado"
                 )
             }
         }
@@ -230,10 +211,10 @@ class AdminUsuariosViewModel @Inject constructor(
 
         viewModelScope.launch {
             deleteUsuarioUseCase(usuario.usuarioId).collect { result ->
-                handleUsuarioMutationResult(
-                    result = result,
-                    successMessage = "Usuario eliminado exitosamente",
-                    defaultErrorMessage = "Error al eliminar usuario"
+                handleMutation(
+                    result,
+                    "Usuario eliminado exitosamente",
+                    "Error al eliminar usuario"
                 )
             }
         }
