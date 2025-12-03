@@ -1,5 +1,6 @@
 package edu.ucne.farmaciacruz.presentation.navigation
 
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -24,6 +25,7 @@ import edu.ucne.farmaciacruz.presentation.order.MisOrdenesScreen
 import edu.ucne.farmaciacruz.presentation.producto.ProductosScreen
 import edu.ucne.farmaciacruz.presentation.producto.detalle.ProductoDetalleScreen
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppNavigation(
     navController: NavHostController = rememberNavController(),
@@ -142,9 +144,7 @@ fun AppNavigation(
             )
         }
 
-        // ==================== RUTAS DE ADMINISTRACIÓN ====================
-
-        composable<AdminDashboardRoute> {
+       composable<AdminDashboardRoute> {
             AdminDashboardScreen(
                 onNavigateToProductos = { navController.navigate(AdminProductosRoute) },
                 onNavigateToUsuarios = { navController.navigate(AdminUsuariosRoute) },

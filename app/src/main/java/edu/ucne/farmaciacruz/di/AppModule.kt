@@ -33,4 +33,5 @@ object AppModule {
     fun provideProductRepository(
         apiService: ApiService
     ): ProductRepository = ProductRepositoryImpl(apiService)
+
 }
