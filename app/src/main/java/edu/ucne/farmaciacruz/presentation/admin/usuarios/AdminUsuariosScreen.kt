@@ -244,14 +244,15 @@ private fun FilterChipsRow(
     val isActivosSelected = selectedEstado ?: false
     val isInactivosSelected = selectedEstado?.not() ?: false
 
+    val nuevoEstadoActivos = if (isActivosSelected) null else true
+    val nuevoEstadoInactivos = if (isInactivosSelected) null else false
+
     LazyRow(
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-
         item {
             val isSelected = selectedRol == null && selectedEstado == null
-
             FilterChip(
                 selected = isSelected,
                 onClick = {
@@ -268,7 +269,6 @@ private fun FilterChipsRow(
         items(roles) { rol ->
             val isSelected = selectedRol == rol
             val nuevoRol = if (isSelected) null else rol
-
             FilterChip(
                 selected = isSelected,
                 onClick = { onRolSelected(nuevoRol) },
@@ -282,7 +282,7 @@ private fun FilterChipsRow(
         item {
             FilterChip(
                 selected = isActivosSelected,
-                onClick = { onEstadoSelected(if (isActivosSelected) null else true) },
+                onClick = { onEstadoSelected(nuevoEstadoActivos) },
                 label = { Text("Activos") },
                 leadingIcon = if (isActivosSelected) {
                     { Icon(Icons.Default.Check, null, Modifier.size(18.dp)) }
@@ -291,11 +291,9 @@ private fun FilterChipsRow(
         }
 
         item {
-            val nuevoEstado = if (isInactivosSelected) null else false
-
             FilterChip(
                 selected = isInactivosSelected,
-                onClick = { onEstadoSelected(nuevoEstado) },
+                onClick = { onEstadoSelected(nuevoEstadoInactivos) },
                 label = { Text("Inactivos") },
                 leadingIcon = if (isInactivosSelected) {
                     { Icon(Icons.Default.Check, null, Modifier.size(18.dp)) }
