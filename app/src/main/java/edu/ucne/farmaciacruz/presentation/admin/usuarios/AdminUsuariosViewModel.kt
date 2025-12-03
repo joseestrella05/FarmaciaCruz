@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import edu.ucne.farmaciacruz.domain.model.Resource
-import edu.ucne.farmaciacruz.domain.model.UsuarioAdmin
 import edu.ucne.farmaciacruz.domain.usecase.admin.CambiarEstadoUsuarioUseCase
 import edu.ucne.farmaciacruz.domain.usecase.admin.CambiarRolUsuarioUseCase
 import edu.ucne.farmaciacruz.domain.usecase.admin.DeleteUsuarioUseCase
@@ -28,192 +27,191 @@ class AdminUsuariosViewModel @Inject constructor(
     private val _state = MutableStateFlow(AdminUsuariosState())
     val state = _state.asStateFlow()
 
-    private val _effect = Channel<AdminUsuariosEffect>()
-    val effect = _effect.receiveAsFlow()
+    private val _uiEvent = Channel<AdminUsuariosUiEvent>()
+    val uiEvent = _uiEvent.receiveAsFlow()
 
     init {
-        loadUsuarios()
+        onEvent(AdminUsuariosEvent.LoadUsuarios)
     }
 
-    fun onEvent(event: AdminUsuariosEvent) {
+    fun onEvent(event: AdminUsuariosUiEvent) {
         when (event) {
-            AdminUsuariosEvent.LoadUsuarios -> loadUsuarios()
-            is AdminUsuariosEvent.SearchQueryChanged -> search(event.query)
-            is AdminUsuariosEvent.RolFilterSelected -> filterByRol(event.rol)
-            is AdminUsuariosEvent.EstadoFilterSelected -> filterByEstado(event.activo)
-            is AdminUsuariosEvent.UsuarioSelected -> selectUsuario(event.usuario)
-            AdminUsuariosEvent.DismissDialogs -> dismissDialogs()
-            is AdminUsuariosEvent.ShowCambiarRolDialog -> showCambiarRolDialog(event.usuario)
-            is AdminUsuariosEvent.CambiarRol -> cambiarRol(event.usuarioId, event.nuevoRol)
-            is AdminUsuariosEvent.ShowToggleEstadoDialog -> showToggleEstadoDialog(event.usuario)
-            is AdminUsuariosEvent.ToggleEstado -> toggleEstado(event.usuarioId, event.activo)
-            is AdminUsuariosEvent.ShowDeleteDialog -> showDeleteDialog(event.usuario)
-            AdminUsuariosEvent.ConfirmDelete -> confirmDelete()
-            AdminUsuariosEvent.Refresh -> loadUsuarios()
+
+            AdminUsuariosEvent.LoadUsuarios ->
+                loadUsuarios()
+
+            is AdminUsuariosEvent.SearchQueryChanged ->
+                reduce { it.copy(searchQuery = event.query) }
+                    .also { applyFilters() }
+
+            is AdminUsuariosEvent.RolFilterSelected ->
+                reduce { it.copy(selectedRol = event.rol) }
+                    .also { applyFilters() }
+
+            is AdminUsuariosEvent.EstadoFilterSelected ->
+                reduce { it.copy(selectedEstado = event.activo) }
+                    .also { applyFilters() }
+
+            is AdminUsuariosEvent.UsuarioSelected ->
+                reduce { it.copy(usuarioSeleccionado = event.usuario) }
+
+            AdminUsuariosEvent.DismissDialogs ->
+                reduce {
+                    it.copy(
+                        showEditRolDialog = false,
+                        showToggleEstadoDialog = false,
+                        showDeleteDialog = false,
+                        usuarioSeleccionado = null
+                    )
+                }
+
+            is AdminUsuariosEvent.ShowCambiarRolDialog ->
+                reduce {
+                    it.copy(
+                        usuarioSeleccionado = event.usuario,
+                        showEditRolDialog = true
+                    )
+                }
+
+            is AdminUsuariosEvent.ShowToggleEstadoDialog ->
+                reduce {
+                    it.copy(
+                        usuarioSeleccionado = event.usuario,
+                        showToggleEstadoDialog = true
+                    )
+                }
+
+            is AdminUsuariosEvent.ShowDeleteDialog ->
+                reduce {
+                    it.copy(
+                        usuarioSeleccionado = event.usuario,
+                        showDeleteDialog = true
+                    )
+                }
+
+            is AdminUsuariosEvent.CambiarRol ->
+                cambiarRol(event.usuarioId, event.nuevoRol)
+
+            is AdminUsuariosEvent.ToggleEstado ->
+                toggleEstado(event.usuarioId, event.activo)
+
+            AdminUsuariosEvent.ConfirmDelete ->
+                confirmDelete()
+
+            AdminUsuariosEvent.Refresh ->
+                loadUsuarios()
+
+            is AdminUsuariosUiEvent.ShowError -> {
+                viewModelScope.launch {
+                    sendUiEvent(event)
+                }
+            }
+
+            is AdminUsuariosUiEvent.ShowSuccess -> {
+                viewModelScope.launch {
+                    sendUiEvent(event)
+                }
+            }
         }
+    }
+
+    private fun reduce(block: (AdminUsuariosState) -> AdminUsuariosState) {
+        _state.update(block)
+    }
+
+    private suspend fun sendUiEvent(event: AdminUsuariosUiEvent) {
+        _uiEvent.send(event)
     }
 
     private fun loadUsuarios() {
         viewModelScope.launch {
-            getAllUsuariosUseCase().collect { result ->
-                when (result) {
-                    is Resource.Loading -> {
-                        _state.update { it.copy(isLoading = true, error = null) }
-                    }
+            getAllUsuariosUseCase().collect { r ->
+                when (r) {
+                    is Resource.Loading ->
+                        reduce { it.copy(isLoading = true) }
+
                     is Resource.Success -> {
-                        val usuarios = result.data ?: emptyList()
-                        _state.update {
+                        reduce {
                             it.copy(
                                 isLoading = false,
-                                usuarios = usuarios,
-                                usuariosFiltrados = usuarios,
-                                error = null
+                                usuarios = r.data.orEmpty()
                             )
                         }
+                        applyFilters()
                     }
+
                     is Resource.Error -> {
-                        _state.update {
-                            it.copy(
-                                isLoading = false,
-                                error = result.message
-                            )
-                        }
-                        _effect.send(
-                            AdminUsuariosEffect.ShowError(
-                                result.message ?: "Error al cargar usuarios"
-                            )
-                        )
+                        reduce { it.copy(isLoading = false) }
+                        sendUiEvent(AdminUsuariosUiEvent.ShowError(r.message ?: "Error"))
                     }
                 }
             }
         }
     }
 
-    private fun search(query: String) {
-        _state.update { it.copy(searchQuery = query) }
-        applyFilters()
-    }
-
-    private fun filterByRol(rol: String?) {
-        _state.update { it.copy(selectedRol = rol) }
-        applyFilters()
-    }
-
-    private fun filterByEstado(activo: Boolean?) {
-        _state.update { it.copy(selectedEstado = activo) }
-        applyFilters()
-    }
-
     private fun applyFilters() {
-        val current = _state.value
-        val filtered = current.usuarios.filter { usuario ->
-            val matchesSearch = current.searchQuery.isBlank() ||
-                    usuario.nombreCompleto.contains(current.searchQuery, ignoreCase = true) ||
-                    usuario.email.contains(current.searchQuery, ignoreCase = true)
+        val stateValue = _state.value
+        val filtered = stateValue.usuarios.filter { usuario ->
 
-            val matchesRol = current.selectedRol == null ||
-                    usuario.rol == current.selectedRol
+            val matchesSearch =
+                stateValue.searchQuery.isBlank() ||
+                        usuario.nombreCompleto.contains(stateValue.searchQuery, ignoreCase = true) ||
+                        usuario.email.contains(stateValue.searchQuery, ignoreCase = true)
 
-            val matchesEstado = current.selectedEstado == null ||
-                    usuario.activo == current.selectedEstado
+            val matchesRol =
+                stateValue.selectedRol == null ||
+                        usuario.rol == stateValue.selectedRol
+
+            val matchesEstado =
+                stateValue.selectedEstado == null ||
+                        usuario.activo == stateValue.selectedEstado
 
             matchesSearch && matchesRol && matchesEstado
         }
 
-        _state.update { it.copy(usuariosFiltrados = filtered) }
+        reduce { it.copy(usuariosFiltrados = filtered) }
     }
 
-    private fun selectUsuario(usuario: UsuarioAdmin) {
-        _state.update { it.copy(usuarioSeleccionado = usuario) }
-    }
-
-    private fun showCambiarRolDialog(usuario: UsuarioAdmin) {
-        _state.update {
-            it.copy(
-                usuarioSeleccionado = usuario,
-                showEditRolDialog = true
-            )
-        }
-    }
-
-    private fun showToggleEstadoDialog(usuario: UsuarioAdmin) {
-        _state.update {
-            it.copy(
-                usuarioSeleccionado = usuario,
-                showToggleEstadoDialog = true
-            )
-        }
-    }
-
-    private fun showDeleteDialog(usuario: UsuarioAdmin) {
-        _state.update {
-            it.copy(
-                usuarioSeleccionado = usuario,
-                showDeleteDialog = true
-            )
-        }
-    }
-
-    private fun dismissDialogs() {
-        _state.update {
-            it.copy(
-                showEditRolDialog = false,
-                showToggleEstadoDialog = false,
-                showDeleteDialog = false,
-                usuarioSeleccionado = null
-            )
-        }
-    }
-
-    private fun cambiarRol(usuarioId: Int, nuevoRol: String) {
+    private fun cambiarRol(id: Int, rol: String) {
         viewModelScope.launch {
-            cambiarRolUsuarioUseCase(usuarioId, nuevoRol).collect { result ->
-                when (result) {
-                    is Resource.Loading -> {
-                        _state.update { it.copy(isLoading = true) }
-                    }
+            cambiarRolUsuarioUseCase(id, rol).collect { r ->
+                when (r) {
+                    is Resource.Loading ->
+                        reduce { it.copy(isLoading = true) }
+
                     is Resource.Success -> {
-                        _state.update { it.copy(isLoading = false) }
-                        _effect.send(
-                            AdminUsuariosEffect.ShowSuccess("Rol actualizado exitosamente")
-                        )
-                        dismissDialogs()
+                        reduce { it.copy(isLoading = false) }
+                        sendUiEvent(AdminUsuariosUiEvent.ShowSuccess("Rol actualizado"))
+                        onEvent(AdminUsuariosEvent.DismissDialogs)
                         loadUsuarios()
                     }
+
                     is Resource.Error -> {
-                        _state.update { it.copy(isLoading = false) }
-                        _effect.send(
-                            AdminUsuariosEffect.ShowError(
-                                result.message ?: "Error al cambiar rol"
-                            )
-                        )
+                        reduce { it.copy(isLoading = false) }
+                        sendUiEvent(AdminUsuariosUiEvent.ShowError(r.message ?: "Error"))
                     }
                 }
             }
         }
     }
 
-    private fun toggleEstado(usuarioId: Int, nuevoEstado: Boolean) {
+    private fun toggleEstado(id: Int, activo: Boolean) {
         viewModelScope.launch {
-            cambiarEstadoUsuarioUseCase(usuarioId, nuevoEstado).collect { result ->
-                when (result) {
-                    is Resource.Loading -> {
-                        _state.update { it.copy(isLoading = true) }
-                    }
+            cambiarEstadoUsuarioUseCase(id, activo).collect { r ->
+                when (r) {
+                    is Resource.Loading ->
+                        reduce { it.copy(isLoading = true) }
+
                     is Resource.Success -> {
-                        _state.update { it.copy(isLoading = false) }
-                        val mensaje = if (nuevoEstado) "Usuario activado" else "Usuario desactivado"
-                        _effect.send(AdminUsuariosEffect.ShowSuccess(mensaje))
-                        dismissDialogs()
+                        reduce { it.copy(isLoading = false) }
+                        sendUiEvent(AdminUsuariosUiEvent.ShowSuccess("Estado actualizado"))
+                        onEvent(AdminUsuariosEvent.DismissDialogs)
                         loadUsuarios()
                     }
+
                     is Resource.Error -> {
-                        _state.update { it.copy(isLoading = false) }
-                        _effect.send(
-                            AdminUsuariosEffect.ShowError(
-                                result.message ?: "Error al cambiar estado"
-                            )
-                        )
+                        reduce { it.copy(isLoading = false) }
+                        sendUiEvent(AdminUsuariosUiEvent.ShowError(r.message ?: "Error"))
                     }
                 }
             }
@@ -224,26 +222,21 @@ class AdminUsuariosViewModel @Inject constructor(
         val usuario = _state.value.usuarioSeleccionado ?: return
 
         viewModelScope.launch {
-            deleteUsuarioUseCase(usuario.usuarioId).collect { result ->
-                when (result) {
-                    is Resource.Loading -> {
-                        _state.update { it.copy(isLoading = true) }
-                    }
+            deleteUsuarioUseCase(usuario.usuarioId).collect { r ->
+                when (r) {
+                    is Resource.Loading ->
+                        reduce { it.copy(isLoading = true) }
+
                     is Resource.Success -> {
-                        _state.update { it.copy(isLoading = false) }
-                        _effect.send(
-                            AdminUsuariosEffect.ShowSuccess("Usuario eliminado exitosamente")
-                        )
-                        dismissDialogs()
+                        reduce { it.copy(isLoading = false) }
+                        sendUiEvent(AdminUsuariosUiEvent.ShowSuccess("Usuario eliminado"))
+                        onEvent(AdminUsuariosEvent.DismissDialogs)
                         loadUsuarios()
                     }
+
                     is Resource.Error -> {
-                        _state.update { it.copy(isLoading = false) }
-                        _effect.send(
-                            AdminUsuariosEffect.ShowError(
-                                result.message ?: "Error al eliminar usuario"
-                            )
-                        )
+                        reduce { it.copy(isLoading = false) }
+                        sendUiEvent(AdminUsuariosUiEvent.ShowError(r.message ?: "Error"))
                     }
                 }
             }

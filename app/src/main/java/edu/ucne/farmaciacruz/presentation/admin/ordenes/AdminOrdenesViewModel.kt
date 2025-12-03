@@ -25,8 +25,8 @@ class AdminOrdenesViewModel @Inject constructor(
     private val _state = MutableStateFlow(AdminOrdenesState())
     val state = _state.asStateFlow()
 
-    private val _effect = Channel<AdminOrdenesEffect>()
-    val effect = _effect.receiveAsFlow()
+    private val _uiEvent = Channel<AdminOrdenesUiEvent>()
+    val uiEvent = _uiEvent.receiveAsFlow()
 
     init {
         loadOrdenes()
@@ -43,6 +43,12 @@ class AdminOrdenesViewModel @Inject constructor(
             is AdminOrdenesEvent.ChangeStatus -> changeStatus(event.orderId, event.nuevoEstado)
             is AdminOrdenesEvent.ShowDetalleDialog -> showDetalleDialog(event.orden)
             AdminOrdenesEvent.Refresh -> loadOrdenes()
+        }
+    }
+
+    private fun emitUiEvent(event: AdminOrdenesUiEvent) {
+        viewModelScope.launch {
+            _uiEvent.send(event)
         }
     }
 
@@ -71,8 +77,8 @@ class AdminOrdenesViewModel @Inject constructor(
                                 error = result.message
                             )
                         }
-                        _effect.send(
-                            AdminOrdenesEffect.ShowError(
+                        emitUiEvent(
+                            AdminOrdenesUiEvent.ShowError(
                                 result.message ?: "Error al cargar órdenes"
                             )
                         )
@@ -149,16 +155,16 @@ class AdminOrdenesViewModel @Inject constructor(
                     }
                     is Resource.Success -> {
                         _state.update { it.copy(isLoading = false) }
-                        _effect.send(
-                            AdminOrdenesEffect.ShowSuccess("Estado actualizado exitosamente")
+                        emitUiEvent(
+                            AdminOrdenesUiEvent.ShowSuccess("Estado actualizado exitosamente")
                         )
                         dismissDialogs()
                         loadOrdenes()
                     }
                     is Resource.Error -> {
                         _state.update { it.copy(isLoading = false) }
-                        _effect.send(
-                            AdminOrdenesEffect.ShowError(
+                        emitUiEvent(
+                            AdminOrdenesUiEvent.ShowError(
                                 result.message ?: "Error al actualizar estado"
                             )
                         )

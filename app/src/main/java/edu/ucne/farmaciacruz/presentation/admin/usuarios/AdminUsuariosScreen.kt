@@ -15,7 +15,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import edu.ucne.farmaciacruz.domain.model.UsuarioAdmin
@@ -30,12 +32,13 @@ fun AdminUsuariosScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
-        viewModel.effect.collect { effect ->
-            when (effect) {
-                is AdminUsuariosEffect.ShowError ->
-                    snackbarHostState.showSnackbar(effect.message)
-                is AdminUsuariosEffect.ShowSuccess ->
-                    snackbarHostState.showSnackbar(effect.message)
+        viewModel.uiEvent.collect { event ->
+            when (event) {
+                is AdminUsuariosUiEvent.ShowError ->
+                    snackbarHostState.showSnackbar(event.message)
+                is AdminUsuariosUiEvent.ShowSuccess ->
+                    snackbarHostState.showSnackbar(event.message)
+                else -> Unit
             }
         }
     }
@@ -66,93 +69,15 @@ fun AdminUsuariosScreen(
             )
         }
     ) { padding ->
-        Column(
+        AdminUsuariosContent(
+            state = state,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-        ) {
-            // Barra de búsqueda
-            SearchBar(
-                query = state.searchQuery,
-                onQueryChange = { viewModel.onEvent(AdminUsuariosEvent.SearchQueryChanged(it)) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            )
-
-            // Filtros
-            FilterChipsRow(
-                selectedRol = state.selectedRol,
-                selectedEstado = state.selectedEstado,
-                roles = state.roles,
-                onRolSelected = { viewModel.onEvent(AdminUsuariosEvent.RolFilterSelected(it)) },
-                onEstadoSelected = { viewModel.onEvent(AdminUsuariosEvent.EstadoFilterSelected(it)) }
-            )
-
-            // Contador de resultados
-            Text(
-                text = "${state.usuariosFiltrados.size} usuarios encontrados",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-            )
-
-            // Lista de usuarios
-            Box(modifier = Modifier.fillMaxSize()) {
-                when {
-                    state.isLoading -> {
-                        CircularProgressIndicator(
-                            modifier = Modifier.align(Alignment.Center)
-                        )
-                    }
-                    state.error != null -> {
-                        ErrorContent(
-                            message = state.error!!,
-                            onRetry = { viewModel.onEvent(AdminUsuariosEvent.LoadUsuarios) },
-                            modifier = Modifier.align(Alignment.Center)
-                        )
-                    }
-                    state.usuariosFiltrados.isEmpty() -> {
-                        EmptyContent(
-                            modifier = Modifier.align(Alignment.Center)
-                        )
-                    }
-                    else -> {
-                        LazyColumn(
-                            contentPadding = PaddingValues(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            items(
-                                items = state.usuariosFiltrados,
-                                key = { it.usuarioId }
-                            ) { usuario ->
-                                UsuarioCard(
-                                    usuario = usuario,
-                                    onCambiarRol = {
-                                        viewModel.onEvent(
-                                            AdminUsuariosEvent.ShowCambiarRolDialog(usuario)
-                                        )
-                                    },
-                                    onToggleEstado = {
-                                        viewModel.onEvent(
-                                            AdminUsuariosEvent.ShowToggleEstadoDialog(usuario)
-                                        )
-                                    },
-                                    onDelete = {
-                                        viewModel.onEvent(
-                                            AdminUsuariosEvent.ShowDeleteDialog(usuario)
-                                        )
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
+                .padding(padding),
+            onEvent = viewModel::onEvent
+        )
     }
 
-    // Diálogos
     if (state.showEditRolDialog && state.usuarioSeleccionado != null) {
         CambiarRolDialog(
             usuario = state.usuarioSeleccionado!!,
@@ -196,6 +121,95 @@ fun AdminUsuariosScreen(
     }
 }
 
+@Composable
+private fun AdminUsuariosContent(
+    state: AdminUsuariosState,
+    modifier: Modifier = Modifier,
+    onEvent: (AdminUsuariosUiEvent) -> Unit
+) {
+    Column(
+        modifier = modifier
+    ) {
+        SearchBar(
+            query = state.searchQuery,
+            onQueryChange = { onEvent(AdminUsuariosEvent.SearchQueryChanged(it)) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        )
+
+        FilterChipsRow(
+            selectedRol = state.selectedRol,
+            selectedEstado = state.selectedEstado,
+            roles = state.roles,
+            onRolSelected = { onEvent(AdminUsuariosEvent.RolFilterSelected(it)) },
+            onEstadoSelected = { onEvent(AdminUsuariosEvent.EstadoFilterSelected(it)) }
+        )
+
+        Text(
+            text = "${state.usuariosFiltrados.size} usuarios encontrados",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
+
+        Box(modifier = Modifier.fillMaxSize()) {
+            when {
+                state.isLoading -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+
+                state.error != null -> {
+                    ErrorContent(
+                        message = state.error!!,
+                        onRetry = { onEvent(AdminUsuariosEvent.LoadUsuarios) },
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+
+                state.usuariosFiltrados.isEmpty() -> {
+                    EmptyContent(
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
+
+                else -> {
+                    LazyColumn(
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(
+                            items = state.usuariosFiltrados,
+                            key = { it.usuarioId }
+                        ) { usuario ->
+                            UsuarioCard(
+                                usuario = usuario,
+                                onCambiarRol = {
+                                    onEvent(
+                                        AdminUsuariosEvent.ShowCambiarRolDialog(usuario)
+                                    )
+                                },
+                                onToggleEstado = {
+                                    onEvent(
+                                        AdminUsuariosEvent.ShowToggleEstadoDialog(usuario)
+                                    )
+                                },
+                                onDelete = {
+                                    onEvent(
+                                        AdminUsuariosEvent.ShowDeleteDialog(usuario)
+                                    )
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SearchBar(
@@ -235,7 +249,6 @@ private fun FilterChipsRow(
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Filtro "Todos"
         item {
             FilterChip(
                 selected = selectedRol == null && selectedEstado == null,
@@ -250,7 +263,6 @@ private fun FilterChipsRow(
             )
         }
 
-        // Filtros por rol
         items(roles) { rol ->
             FilterChip(
                 selected = selectedRol == rol,
@@ -262,7 +274,6 @@ private fun FilterChipsRow(
             )
         }
 
-        // Filtros por estado
         item {
             FilterChip(
                 selected = selectedEstado == true,
@@ -303,7 +314,6 @@ private fun UsuarioCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Avatar
                 Surface(
                     modifier = Modifier
                         .size(48.dp)
@@ -321,7 +331,6 @@ private fun UsuarioCard(
 
                 Spacer(Modifier.width(12.dp))
 
-                // Info del usuario
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = usuario.nombreCompleto,
@@ -339,7 +348,6 @@ private fun UsuarioCard(
                     )
                 }
 
-                // Estado
                 Surface(
                     shape = RoundedCornerShape(8.dp),
                     color = if (usuario.activo)
@@ -361,7 +369,6 @@ private fun UsuarioCard(
 
             Spacer(Modifier.height(12.dp))
 
-            // Tags adicionales
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -399,7 +406,6 @@ private fun UsuarioCard(
 
             Spacer(Modifier.height(8.dp))
 
-            // Info adicional
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -434,7 +440,6 @@ private fun UsuarioCard(
 
             Spacer(Modifier.height(8.dp))
 
-            // Acciones
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
@@ -722,6 +727,37 @@ private fun EmptyContent(modifier: Modifier = Modifier) {
             text = "No se encontraron usuarios",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Preview(showSystemUi = true)
+@Composable
+private fun AdminUsuariosScreenPreview() {
+    val fakeUsuario = UsuarioAdmin(
+        usuarioId = 1,
+        nombre = "Juan",
+        email = "juan@test.com",
+        rol = "Administrador",
+        activo = true,
+        emailConfirmado = true,
+        telefono = "809-555-5555",
+        fechaCreacion = "",
+        apellido = "",
+        ultimoAcceso = ""
+
+    )
+
+    val previewState = AdminUsuariosState(
+        usuarios = listOf(fakeUsuario),
+        usuariosFiltrados = listOf(fakeUsuario),
+        roles = listOf("Administrador", "Cliente")
+    )
+
+    MaterialTheme {
+        AdminUsuariosContent(
+            state = previewState,
+            onEvent = {}
         )
     }
 }

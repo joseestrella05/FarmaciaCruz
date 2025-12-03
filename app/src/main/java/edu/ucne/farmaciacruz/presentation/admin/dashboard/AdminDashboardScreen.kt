@@ -3,21 +3,24 @@ package edu.ucne.farmaciacruz.presentation.admin.dashboard
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import edu.ucne.farmaciacruz.domain.model.AdminStats
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,15 +35,17 @@ fun AdminDashboardScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
-        viewModel.effect.collect { effect ->
-            when (effect) {
-                is AdminDashboardEffect.ShowError ->
-                    snackbarHostState.showSnackbar(effect.message)
-                is AdminDashboardEffect.ShowSuccess ->
-                    snackbarHostState.showSnackbar(effect.message)
-                AdminDashboardEffect.NavigateToProductos -> onNavigateToProductos()
-                AdminDashboardEffect.NavigateToUsuarios -> onNavigateToUsuarios()
-                AdminDashboardEffect.NavigateToOrdenes -> onNavigateToOrdenes()
+        viewModel.uiEvent.collect { event ->
+            when (event) {
+                is AdminDashboardUiEvent.ShowError ->
+                    snackbarHostState.showSnackbar(event.message)
+
+                is AdminDashboardUiEvent.ShowSuccess ->
+                    snackbarHostState.showSnackbar(event.message)
+
+                AdminDashboardUiEvent.NavigateToProductos -> onNavigateToProductos()
+                AdminDashboardUiEvent.NavigateToUsuarios -> onNavigateToUsuarios()
+                AdminDashboardUiEvent.NavigateToOrdenes -> onNavigateToOrdenes()
             }
         }
     }
@@ -52,7 +57,7 @@ fun AdminDashboardScreen(
                 title = { Text("Panel de Administración") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, "Volver")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver")
                     }
                 },
                 actions = {
@@ -76,18 +81,15 @@ fun AdminDashboardScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            when {
-                state.isLoading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.align(Alignment.Center)
-                    )
-                }
-                else -> {
-                    AdminDashboardContent(
-                        state = state,
-                        onEvent = viewModel::onEvent
-                    )
-                }
+            if (state.isLoading) {
+                CircularProgressIndicator(
+                    modifier = Modifier.align(Alignment.Center)
+                )
+            } else {
+                AdminDashboardContent(
+                    state = state,
+                    onEvent = viewModel::onEvent
+                )
             }
         }
     }
@@ -105,12 +107,10 @@ private fun AdminDashboardContent(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Tarjetas de estadísticas principales
         StatsCardsGrid(stats = state.stats)
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Acciones rápidas
         Text(
             "Acciones Rápidas",
             style = MaterialTheme.typography.titleLarge,
@@ -119,16 +119,20 @@ private fun AdminDashboardContent(
 
         QuickActionsGrid(onEvent = onEvent)
 
-        // Gráficos y estadísticas detalladas
         if (state.stats != null) {
             Spacer(modifier = Modifier.height(8.dp))
             DetailedStatsSection(state.stats)
+        }
+
+        state.error?.let { error ->
+            Spacer(Modifier.height(8.dp))
+            ErrorBanner(error = error)
         }
     }
 }
 
 @Composable
-private fun StatsCardsGrid(stats: edu.ucne.farmaciacruz.domain.model.AdminStats?) {
+private fun StatsCardsGrid(stats: AdminStats?) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -180,7 +184,7 @@ private fun StatCard(
     value: String,
     subtitle: String,
     icon: ImageVector,
-    color: androidx.compose.ui.graphics.Color
+    color: Color
 ) {
     Card(
         modifier = Modifier
@@ -290,14 +294,14 @@ private fun QuickActionButton(
             Text(
                 title,
                 style = MaterialTheme.typography.bodySmall,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                textAlign = TextAlign.Center
             )
         }
     }
 }
 
 @Composable
-private fun DetailedStatsSection(stats: edu.ucne.farmaciacruz.domain.model.AdminStats) {
+private fun DetailedStatsSection(stats: AdminStats) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(
             "Distribución",
@@ -305,7 +309,6 @@ private fun DetailedStatsSection(stats: edu.ucne.farmaciacruz.domain.model.Admin
             fontWeight = FontWeight.Bold
         )
 
-        // Usuarios por rol
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
@@ -333,7 +336,6 @@ private fun DetailedStatsSection(stats: edu.ucne.farmaciacruz.domain.model.Admin
             }
         }
 
-        // Productos por categoría
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
@@ -359,6 +361,36 @@ private fun DetailedStatsSection(stats: edu.ucne.farmaciacruz.domain.model.Admin
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ErrorBanner(error: String) {
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer
+        ),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                Icons.Default.Error,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error
+            )
+            Text(
+                text = error,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.weight(1f)
+            )
         }
     }
 }

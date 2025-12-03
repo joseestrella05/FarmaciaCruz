@@ -21,8 +21,7 @@ class AdminProductosViewModel @Inject constructor(
 
     private val _state = MutableStateFlow(AdminProductosState())
     val state = _state.asStateFlow()
-
-    private val _effect = Channel<AdminProductosEffect>()
+    private val _effect = Channel<AdminProductosUiEvent>()
     val effect = _effect.receiveAsFlow()
 
     init {
@@ -71,7 +70,7 @@ class AdminProductosViewModel @Inject constructor(
                             it.copy(isLoading = false, error = result.message)
                         }
                         _effect.send(
-                            AdminProductosEffect.ShowError(
+                            AdminProductosUiEvent.ShowError(
                                 result.message ?: "Error al cargar productos"
                             )
                         )
@@ -159,7 +158,7 @@ class AdminProductosViewModel @Inject constructor(
                     is Resource.Success -> {
                         _state.update { it.copy(isLoading = false) }
                         _effect.send(
-                            AdminProductosEffect.ShowSuccess("Producto creado exitosamente")
+                            AdminProductosUiEvent.ShowSuccess("Producto creado exitosamente")
                         )
                         dismissDialogs()
                         loadProductos()
@@ -167,7 +166,7 @@ class AdminProductosViewModel @Inject constructor(
                     is Resource.Error -> {
                         _state.update { it.copy(isLoading = false) }
                         _effect.send(
-                            AdminProductosEffect.ShowError(
+                            AdminProductosUiEvent.ShowError(
                                 result.message ?: "Error al crear producto"
                             )
                         )
@@ -187,7 +186,7 @@ class AdminProductosViewModel @Inject constructor(
                     is Resource.Success -> {
                         _state.update { it.copy(isLoading = false) }
                         _effect.send(
-                            AdminProductosEffect.ShowSuccess("Producto actualizado exitosamente")
+                            AdminProductosUiEvent.ShowSuccess("Producto actualizado exitosamente")
                         )
                         dismissDialogs()
                         loadProductos()
@@ -195,7 +194,7 @@ class AdminProductosViewModel @Inject constructor(
                     is Resource.Error -> {
                         _state.update { it.copy(isLoading = false) }
                         _effect.send(
-                            AdminProductosEffect.ShowError(
+                            AdminProductosUiEvent.ShowError(
                                 result.message ?: "Error al actualizar producto"
                             )
                         )
@@ -217,7 +216,7 @@ class AdminProductosViewModel @Inject constructor(
                     is Resource.Success -> {
                         _state.update { it.copy(isLoading = false) }
                         _effect.send(
-                            AdminProductosEffect.ShowSuccess("Producto eliminado exitosamente")
+                            AdminProductosUiEvent.ShowSuccess("Producto eliminado exitosamente")
                         )
                         dismissDialogs()
                         loadProductos()
@@ -225,7 +224,7 @@ class AdminProductosViewModel @Inject constructor(
                     is Resource.Error -> {
                         _state.update { it.copy(isLoading = false) }
                         _effect.send(
-                            AdminProductosEffect.ShowError(
+                            AdminProductosUiEvent.ShowError(
                                 result.message ?: "Error al eliminar producto"
                             )
                         )

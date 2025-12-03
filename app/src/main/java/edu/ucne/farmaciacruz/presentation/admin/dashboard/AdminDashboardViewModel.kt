@@ -21,8 +21,8 @@ class AdminDashboardViewModel @Inject constructor(
     private val _state = MutableStateFlow(AdminDashboardState())
     val state = _state.asStateFlow()
 
-    private val _effect = Channel<AdminDashboardEffect>()
-    val effect = _effect.receiveAsFlow()
+    private val _uiEvent = Channel<AdminDashboardUiEvent>()
+    val uiEvent = _uiEvent.receiveAsFlow()
 
     init {
         loadStats()
@@ -32,7 +32,7 @@ class AdminDashboardViewModel @Inject constructor(
         when (event) {
             AdminDashboardEvent.LoadStats -> loadStats()
             is AdminDashboardEvent.TabSelected -> selectTab(event.tab)
-            AdminDashboardEvent.Refresh -> refresh()
+            AdminDashboardEvent.Refresh -> loadStats()
         }
     }
 
@@ -43,6 +43,7 @@ class AdminDashboardViewModel @Inject constructor(
                     is Resource.Loading -> {
                         _state.update { it.copy(isLoading = true, error = null) }
                     }
+
                     is Resource.Success -> {
                         _state.update {
                             it.copy(
@@ -52,6 +53,7 @@ class AdminDashboardViewModel @Inject constructor(
                             )
                         }
                     }
+
                     is Resource.Error -> {
                         _state.update {
                             it.copy(
@@ -59,8 +61,8 @@ class AdminDashboardViewModel @Inject constructor(
                                 error = result.message
                             )
                         }
-                        _effect.send(
-                            AdminDashboardEffect.ShowError(
+                        _uiEvent.send(
+                            AdminDashboardUiEvent.ShowError(
                                 result.message ?: "Error al cargar estadísticas"
                             )
                         )
@@ -75,15 +77,17 @@ class AdminDashboardViewModel @Inject constructor(
 
         viewModelScope.launch {
             when (tab) {
-                AdminTab.PRODUCTOS -> _effect.send(AdminDashboardEffect.NavigateToProductos)
-                AdminTab.USUARIOS -> _effect.send(AdminDashboardEffect.NavigateToUsuarios)
-                AdminTab.ORDENES -> _effect.send(AdminDashboardEffect.NavigateToOrdenes)
-                AdminTab.DASHBOARD -> {}
+                AdminTab.PRODUCTOS ->
+                    _uiEvent.send(AdminDashboardUiEvent.NavigateToProductos)
+
+                AdminTab.USUARIOS ->
+                    _uiEvent.send(AdminDashboardUiEvent.NavigateToUsuarios)
+
+                AdminTab.ORDENES ->
+                    _uiEvent.send(AdminDashboardUiEvent.NavigateToOrdenes)
+
+                AdminTab.DASHBOARD -> Unit
             }
         }
-    }
-
-    private fun refresh() {
-        loadStats()
     }
 }

@@ -1,5 +1,3 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
-
 package edu.ucne.farmaciacruz.presentation.admin.productos
 
 import androidx.compose.foundation.layout.*
@@ -9,22 +7,56 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Error
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
 import edu.ucne.farmaciacruz.domain.model.Producto
 
+@ExperimentalMaterial3Api
 @Composable
 fun AdminProductosScreen(
     onBack: () -> Unit,
@@ -34,16 +66,33 @@ fun AdminProductosScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
-        viewModel.effect.collect { effect ->
-            when (effect) {
-                is AdminProductosEffect.ShowError ->
-                    snackbarHostState.showSnackbar(effect.message)
-                is AdminProductosEffect.ShowSuccess ->
-                    snackbarHostState.showSnackbar(effect.message)
+        viewModel.effect.collect { event ->
+            when (event) {
+                is AdminProductosUiEvent.ShowError ->
+                    snackbarHostState.showSnackbar(event.message)
+
+                is AdminProductosUiEvent.ShowSuccess ->
+                    snackbarHostState.showSnackbar(event.message)
             }
         }
     }
 
+    AdminProductosContent(
+        state = state,
+        snackbarHostState = snackbarHostState,
+        onBack = onBack,
+        onEvent = viewModel::onEvent
+    )
+}
+
+@ExperimentalMaterial3Api
+@Composable
+private fun AdminProductosContent(
+    state: AdminProductosState,
+    snackbarHostState: SnackbarHostState,
+    onBack: () -> Unit,
+    onEvent: (AdminProductosEvent) -> Unit
+) {
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
@@ -51,14 +100,12 @@ fun AdminProductosScreen(
                 title = { Text("Gestión de Productos") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, "Volver")
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
                     }
                 },
                 actions = {
-                    IconButton(
-                        onClick = { viewModel.onEvent(AdminProductosEvent.LoadProductos) }
-                    ) {
-                        Icon(Icons.Default.Refresh, "Actualizar")
+                    IconButton(onClick = { onEvent(AdminProductosEvent.LoadProductos) }) {
+                        Icon(Icons.Default.Add, contentDescription = "Recargar")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -71,10 +118,9 @@ fun AdminProductosScreen(
         },
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { viewModel.onEvent(AdminProductosEvent.ShowAddDialog) },
-                containerColor = MaterialTheme.colorScheme.primary
+                onClick = { onEvent(AdminProductosEvent.ShowAddDialog) }
             ) {
-                Icon(Icons.Default.Add, "Agregar producto")
+                Icon(Icons.Default.Add, contentDescription = "Agregar")
             }
         }
     ) { padding ->
@@ -83,25 +129,22 @@ fun AdminProductosScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Barra de búsqueda
-            SearchBar(
+            ProductosSearchBar(
                 query = state.searchQuery,
-                onQueryChange = { viewModel.onEvent(AdminProductosEvent.SearchQueryChanged(it)) },
+                onQueryChange = { onEvent(AdminProductosEvent.SearchQueryChanged(it)) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp)
             )
 
-            // Filtros de categoría
             if (state.categorias.isNotEmpty()) {
-                CategoriaFilterChips(
-                    selectedCategoria = state.selectedCategoria,
+                CategoriaFilterRow(
                     categorias = state.categorias,
-                    onCategoriaSelected = { viewModel.onEvent(AdminProductosEvent.CategoriaSelected(it)) }
+                    selectedCategoria = state.selectedCategoria,
+                    onCategoriaSelected = { onEvent(AdminProductosEvent.CategoriaSelected(it)) }
                 )
             }
 
-            // Contador de resultados
             Text(
                 text = "${state.productosFiltrados.size} productos encontrados",
                 style = MaterialTheme.typography.bodySmall,
@@ -109,46 +152,39 @@ fun AdminProductosScreen(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
 
-            // Lista de productos
             Box(modifier = Modifier.fillMaxSize()) {
                 when {
                     state.isLoading -> {
-                        CircularProgressIndicator(
-                            modifier = Modifier.align(Alignment.Center)
-                        )
+                        CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
                     }
+
                     state.error != null -> {
-                        ErrorContent(
-                            message = state.error!!,
-                            onRetry = { viewModel.onEvent(AdminProductosEvent.LoadProductos) },
+                        ProductosError(
+                            message = state.error,
+                            onRetry = { onEvent(AdminProductosEvent.LoadProductos) },
                             modifier = Modifier.align(Alignment.Center)
                         )
                     }
+
                     state.productosFiltrados.isEmpty() -> {
-                        EmptyContent(
+                        ProductosEmpty(
                             modifier = Modifier.align(Alignment.Center)
                         )
                     }
+
                     else -> {
                         LazyColumn(
                             contentPadding = PaddingValues(16.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            items(
-                                items = state.productosFiltrados,
-                                key = { it.id }
-                            ) { producto ->
+                            items(state.productosFiltrados, key = { it.id }) { producto ->
                                 ProductoCard(
                                     producto = producto,
                                     onEdit = {
-                                        viewModel.onEvent(
-                                            AdminProductosEvent.ProductoSelected(producto)
-                                        )
+                                        onEvent(AdminProductosEvent.ProductoSelected(producto))
                                     },
                                     onDelete = {
-                                        viewModel.onEvent(
-                                            AdminProductosEvent.DeleteProducto(producto.id)
-                                        )
+                                        onEvent(AdminProductosEvent.DeleteProducto(producto.id))
                                     }
                                 )
                             }
@@ -159,20 +195,19 @@ fun AdminProductosScreen(
         }
     }
 
-    // Diálogos
     if (state.showAddDialog) {
         AddProductoDialog(
-            isLoading = state.isLoading,
             categorias = state.categorias,
-            onDismiss = { viewModel.onEvent(AdminProductosEvent.DismissDialogs) },
-            onConfirm = { nombre, categoria, descripcion, precio, imagenUrl ->
-                viewModel.onEvent(
+            isLoading = state.isLoading,
+            onDismiss = { onEvent(AdminProductosEvent.DismissDialogs) },
+            onConfirm = { n, c, d, p, img ->
+                onEvent(
                     AdminProductosEvent.CreateProducto(
-                        nombre = nombre,
-                        categoria = categoria,
-                        descripcion = descripcion,
-                        precio = precio,
-                        imagenUrl = imagenUrl
+                        n,
+                        c,
+                        d,
+                        p,
+                        img
                     )
                 )
             }
@@ -181,28 +216,29 @@ fun AdminProductosScreen(
 
     if (state.showEditDialog && state.productoSeleccionado != null) {
         EditProductoDialog(
-            producto = state.productoSeleccionado!!,
-            isLoading = state.isLoading,
+            producto = state.productoSeleccionado,
             categorias = state.categorias,
-            onDismiss = { viewModel.onEvent(AdminProductosEvent.DismissDialogs) },
-            onConfirm = { producto ->
-                viewModel.onEvent(AdminProductosEvent.UpdateProducto(producto))
+            isLoading = state.isLoading,
+            onDismiss = { onEvent(AdminProductosEvent.DismissDialogs) },
+            onConfirm = { updated ->
+                onEvent(AdminProductosEvent.UpdateProducto(updated))
             }
         )
     }
 
     if (state.showDeleteDialog && state.productoSeleccionado != null) {
         DeleteProductoDialog(
-            producto = state.productoSeleccionado!!,
+            producto = state.productoSeleccionado,
             isLoading = state.isLoading,
-            onDismiss = { viewModel.onEvent(AdminProductosEvent.DismissDialogs) },
-            onConfirm = { viewModel.onEvent(AdminProductosEvent.ConfirmDelete) }
+            onDismiss = { onEvent(AdminProductosEvent.DismissDialogs) },
+            onConfirm = { onEvent(AdminProductosEvent.ConfirmDelete) }
         )
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SearchBar(
+private fun ProductosSearchBar(
     query: String,
     onQueryChange: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -210,14 +246,12 @@ private fun SearchBar(
     OutlinedTextField(
         value = query,
         onValueChange = onQueryChange,
-        placeholder = { Text("Buscar productos...") },
-        leadingIcon = {
-            Icon(Icons.Default.Search, contentDescription = null)
-        },
+        placeholder = { Text("Buscar por nombre o descripción...") },
+        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
         trailingIcon = {
             if (query.isNotEmpty()) {
                 IconButton(onClick = { onQueryChange("") }) {
-                    Icon(Icons.Default.Clear, contentDescription = "Limpiar")
+                    Icon(Icons.Default.Close, contentDescription = "Limpiar")
                 }
             }
         },
@@ -228,9 +262,9 @@ private fun SearchBar(
 }
 
 @Composable
-private fun CategoriaFilterChips(
-    selectedCategoria: String?,
+private fun CategoriaFilterRow(
     categorias: List<String>,
+    selectedCategoria: String?,
     onCategoriaSelected: (String?) -> Unit
 ) {
     LazyRow(
@@ -241,9 +275,15 @@ private fun CategoriaFilterChips(
             FilterChip(
                 selected = selectedCategoria == null,
                 onClick = { onCategoriaSelected(null) },
-                label = { Text("Todos") },
+                label = { Text("Todas") },
                 leadingIcon = if (selectedCategoria == null) {
-                    { Icon(Icons.Default.Check, contentDescription = null, Modifier.size(18.dp)) }
+                    {
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 } else null
             )
         }
@@ -251,10 +291,20 @@ private fun CategoriaFilterChips(
         items(categorias) { categoria ->
             FilterChip(
                 selected = selectedCategoria == categoria,
-                onClick = { onCategoriaSelected(if (selectedCategoria == categoria) null else categoria) },
+                onClick = {
+                    onCategoriaSelected(
+                        if (selectedCategoria == categoria) null else categoria
+                    )
+                },
                 label = { Text(categoria) },
                 leadingIcon = if (selectedCategoria == categoria) {
-                    { Icon(Icons.Default.Check, contentDescription = null, Modifier.size(18.dp)) }
+                    {
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 } else null
             )
         }
@@ -269,75 +319,85 @@ private fun ProductoCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp)
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            // Imagen del producto
-            AsyncImage(
-                model = producto.imagenUrl,
-                contentDescription = producto.nombre,
-                modifier = Modifier
-                    .size(80.dp)
-                    .clip(RoundedCornerShape(8.dp)),
-                contentScale = ContentScale.Crop
-            )
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(RoundedCornerShape(12.dp)),
+                    color = MaterialTheme.colorScheme.primaryContainer
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Default.Image,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
 
-            Spacer(Modifier.width(12.dp))
+                Spacer(Modifier.width(12.dp))
 
-            // Info del producto
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = producto.nombre,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                Text(
-                    text = producto.categoria,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
-
-                Text(
-                    text = producto.descripcion,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                Spacer(Modifier.height(4.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = producto.nombre,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = producto.descripcion,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
 
                 Text(
-                    text = "$${String.format("%.2f", producto.precio)}",
+                    text = "$${producto.precio}",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
             }
 
-            // Acciones
-            Column {
-                IconButton(onClick = onEdit) {
-                    Icon(
-                        Icons.Default.Edit,
-                        contentDescription = "Editar",
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
-                IconButton(onClick = onDelete) {
-                    Icon(
-                        Icons.Default.Delete,
-                        contentDescription = "Eliminar",
-                        tint = MaterialTheme.colorScheme.error
-                    )
+            Spacer(Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                AssistChip(
+                    onClick = { },
+                    label = { Text(producto.categoria) }
+                )
+
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    TextButton(onClick = onEdit) {
+                        Icon(Icons.Default.Edit, contentDescription = null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Editar")
+                    }
+                    TextButton(
+                        onClick = onDelete,
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Icon(Icons.Default.Delete, contentDescription = null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Eliminar")
+                    }
                 }
             }
         }
@@ -345,312 +405,7 @@ private fun ProductoCard(
 }
 
 @Composable
-private fun AddProductoDialog(
-    isLoading: Boolean,
-    categorias: List<String>,
-    onDismiss: () -> Unit,
-    onConfirm: (String, String, String, Double, String) -> Unit
-) {
-    var nombre by remember { mutableStateOf("") }
-    var categoria by remember { mutableStateOf("") }
-    var descripcion by remember { mutableStateOf("") }
-    var precio by remember { mutableStateOf("") }
-    var imagenUrl by remember { mutableStateOf("") }
-    var showCategoriaMenu by remember { mutableStateOf(false) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Agregar Producto") },
-        text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                OutlinedTextField(
-                    value = nombre,
-                    onValueChange = { nombre = it },
-                    label = { Text("Nombre") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                ExposedDropdownMenuBox(
-                    expanded = showCategoriaMenu,
-                    onExpandedChange = { showCategoriaMenu = it }
-                ) {
-                    OutlinedTextField(
-                        value = categoria,
-                        onValueChange = { categoria = it },
-                        label = { Text("Categoría") },
-                        singleLine = true,
-                        trailingIcon = {
-                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = showCategoriaMenu)
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor()
-                    )
-
-                    ExposedDropdownMenu(
-                        expanded = showCategoriaMenu,
-                        onDismissRequest = { showCategoriaMenu = false }
-                    ) {
-                        categorias.forEach { cat ->
-                            DropdownMenuItem(
-                                text = { Text(cat) },
-                                onClick = {
-                                    categoria = cat
-                                    showCategoriaMenu = false
-                                }
-                            )
-                        }
-                    }
-                }
-
-                OutlinedTextField(
-                    value = descripcion,
-                    onValueChange = { descripcion = it },
-                    label = { Text("Descripción") },
-                    maxLines = 3,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
-                    value = precio,
-                    onValueChange = { precio = it.filter { c -> c.isDigit() || c == '.' } },
-                    label = { Text("Precio") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    leadingIcon = { Text("$") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
-                    value = imagenUrl,
-                    onValueChange = { imagenUrl = it },
-                    label = { Text("URL de Imagen") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    val precioDouble = precio.toDoubleOrNull() ?: 0.0
-                    onConfirm(nombre, categoria, descripcion, precioDouble, imagenUrl)
-                },
-                enabled = !isLoading && nombre.isNotBlank() && categoria.isNotBlank() && precio.isNotBlank()
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    Text("Crear")
-                }
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss, enabled = !isLoading) {
-                Text("Cancelar")
-            }
-        }
-    )
-}
-
-@Composable
-private fun EditProductoDialog(
-    producto: Producto,
-    isLoading: Boolean,
-    categorias: List<String>,
-    onDismiss: () -> Unit,
-    onConfirm: (Producto) -> Unit
-) {
-    var nombre by remember { mutableStateOf(producto.nombre) }
-    var categoria by remember { mutableStateOf(producto.categoria) }
-    var descripcion by remember { mutableStateOf(producto.descripcion) }
-    var precio by remember { mutableStateOf(producto.precio.toString()) }
-    var imagenUrl by remember { mutableStateOf(producto.imagenUrl) }
-    var showCategoriaMenu by remember { mutableStateOf(false) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Editar Producto") },
-        text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                OutlinedTextField(
-                    value = nombre,
-                    onValueChange = { nombre = it },
-                    label = { Text("Nombre") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                ExposedDropdownMenuBox(
-                    expanded = showCategoriaMenu,
-                    onExpandedChange = { showCategoriaMenu = it }
-                ) {
-                    OutlinedTextField(
-                        value = categoria,
-                        onValueChange = { categoria = it },
-                        label = { Text("Categoría") },
-                        singleLine = true,
-                        trailingIcon = {
-                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = showCategoriaMenu)
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor()
-                    )
-
-                    ExposedDropdownMenu(
-                        expanded = showCategoriaMenu,
-                        onDismissRequest = { showCategoriaMenu = false }
-                    ) {
-                        categorias.forEach { cat ->
-                            DropdownMenuItem(
-                                text = { Text(cat) },
-                                onClick = {
-                                    categoria = cat
-                                    showCategoriaMenu = false
-                                }
-                            )
-                        }
-                    }
-                }
-
-                OutlinedTextField(
-                    value = descripcion,
-                    onValueChange = { descripcion = it },
-                    label = { Text("Descripción") },
-                    maxLines = 3,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
-                    value = precio,
-                    onValueChange = { precio = it.filter { c -> c.isDigit() || c == '.' } },
-                    label = { Text("Precio") },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    leadingIcon = { Text("$") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
-                    value = imagenUrl,
-                    onValueChange = { imagenUrl = it },
-                    label = { Text("URL de Imagen") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    val precioDouble = precio.toDoubleOrNull() ?: producto.precio
-                    onConfirm(
-                        producto.copy(
-                            nombre = nombre,
-                            categoria = categoria,
-                            descripcion = descripcion,
-                            precio = precioDouble,
-                            imagenUrl = imagenUrl
-                        )
-                    )
-                },
-                enabled = !isLoading && nombre.isNotBlank() && categoria.isNotBlank() && precio.isNotBlank()
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp
-                    )
-                } else {
-                    Text("Guardar")
-                }
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss, enabled = !isLoading) {
-                Text("Cancelar")
-            }
-        }
-    )
-}
-
-@Composable
-private fun DeleteProductoDialog(
-    producto: Producto,
-    isLoading: Boolean,
-    onDismiss: () -> Unit,
-    onConfirm: () -> Unit
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = {
-            Icon(
-                Icons.Default.Warning,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.error
-            )
-        },
-        title = { Text("Eliminar Producto") },
-        text = {
-            Column {
-                Text("¿Estás seguro de que deseas eliminar este producto? Esta acción no se puede deshacer.")
-
-                Spacer(Modifier.height(12.dp))
-
-                Text(
-                    text = producto.nombre,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Text(
-                    text = "Categoría: ${producto.categoria}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    text = "$${String.format("%.2f", producto.precio)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = onConfirm,
-                enabled = !isLoading,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error
-                )
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onError
-                    )
-                } else {
-                    Text("Eliminar")
-                }
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss, enabled = !isLoading) {
-                Text("Cancelar")
-            }
-        }
-    )
-}
-
-@Composable
-private fun ErrorContent(
+private fun ProductosError(
     message: String,
     onRetry: () -> Unit,
     modifier: Modifier = Modifier
@@ -679,13 +434,13 @@ private fun ErrorContent(
 }
 
 @Composable
-private fun EmptyContent(modifier: Modifier = Modifier) {
+private fun ProductosEmpty(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier.padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Icon(
-            Icons.Default.Inventory2,
+            Icons.Default.Image,
             contentDescription = null,
             modifier = Modifier.size(48.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant
@@ -696,10 +451,242 @@ private fun EmptyContent(modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Text(
-            text = "Toca + para agregar un producto",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+    }
+}
+
+@Composable
+private fun AddProductoDialog(
+    categorias: List<String>,
+    isLoading: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: (String, String, String, Double, String) -> Unit
+) {
+    var nombre by remember { mutableStateOf("") }
+    var categoria by remember { mutableStateOf(categorias.firstOrNull().orEmpty()) }
+    var descripcion by remember { mutableStateOf("") }
+    var precioText by remember { mutableStateOf("") }
+    var imagenUrl by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Nuevo producto") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = nombre,
+                    onValueChange = { nombre = it },
+                    label = { Text("Nombre") },
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = categoria,
+                    onValueChange = { categoria = it },
+                    label = { Text("Categoría") },
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = descripcion,
+                    onValueChange = { descripcion = it },
+                    label = { Text("Descripción") },
+                    maxLines = 3
+                )
+                OutlinedTextField(
+                    value = precioText,
+                    onValueChange = { precioText = it },
+                    label = { Text("Precio") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = imagenUrl,
+                    onValueChange = { imagenUrl = it },
+                    label = { Text("URL de imagen") },
+                    singleLine = true
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                enabled = !isLoading && nombre.isNotBlank() && precioText.toDoubleOrNull() != null,
+                onClick = {
+                    val precio = precioText.toDoubleOrNull() ?: 0.0
+                    onConfirm(nombre, categoria, descripcion, precio, imagenUrl)
+                }
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text("Guardar")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isLoading) {
+                Text("Cancelar")
+            }
+        }
+    )
+}
+
+@Composable
+private fun EditProductoDialog(
+    producto: Producto,
+    categorias: List<String>,
+    isLoading: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: (Producto) -> Unit
+) {
+    var nombre by remember { mutableStateOf(producto.nombre) }
+    var categoria by remember { mutableStateOf(producto.categoria) }
+    var descripcion by remember { mutableStateOf(producto.descripcion) }
+    var precioText by remember { mutableStateOf(producto.precio.toString()) }
+    var imagenUrl by remember { mutableStateOf(producto.imagenUrl) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Editar producto") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = nombre,
+                    onValueChange = { nombre = it },
+                    label = { Text("Nombre") },
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = categoria,
+                    onValueChange = { categoria = it },
+                    label = { Text("Categoría") },
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = descripcion,
+                    onValueChange = { descripcion = it },
+                    label = { Text("Descripción") },
+                    maxLines = 3
+                )
+                OutlinedTextField(
+                    value = precioText,
+                    onValueChange = { precioText = it },
+                    label = { Text("Precio") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = imagenUrl,
+                    onValueChange = { imagenUrl = it },
+                    label = { Text("URL de imagen") },
+                    singleLine = true
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                enabled = !isLoading && nombre.isNotBlank() && precioText.toDoubleOrNull() != null,
+                onClick = {
+                    val precio = precioText.toDoubleOrNull() ?: producto.precio
+                    onConfirm(
+                        producto.copy(
+                            nombre = nombre,
+                            categoria = categoria,
+                            descripcion = descripcion,
+                            precio = precio,
+                            imagenUrl = imagenUrl
+                        )
+                    )
+                }
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp
+                    )
+                } else {
+                    Text("Guardar")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isLoading) {
+                Text("Cancelar")
+            }
+        }
+    )
+}
+
+@Composable
+private fun DeleteProductoDialog(
+    producto: Producto,
+    isLoading: Boolean,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Eliminar producto") },
+        text = {
+            Column {
+                Text("¿Seguro que deseas eliminar este producto? Esta acción no se puede deshacer.")
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = producto.nombre,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                enabled = !isLoading,
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error
+                )
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onError
+                    )
+                } else {
+                    Text("Eliminar")
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isLoading) {
+                Text("Cancelar")
+            }
+        }
+    )
+}
+
+@ExperimentalMaterial3Api
+@Preview(showSystemUi = true)
+@Composable
+private fun AdminProductosPreview() {
+    val productoDemo = Producto(
+        id = 1,
+        nombre = "Ibuprofeno 400mg",
+        categoria = "Analgesicos",
+        descripcion = "Alivia el dolor y la inflamación.",
+        precio = 120.0,
+        imagenUrl = ""
+    )
+
+    MaterialTheme {
+        AdminProductosContent(
+            state = AdminProductosState(
+                productos = listOf(productoDemo),
+                productosFiltrados = listOf(productoDemo),
+                categorias = listOf("Analgesicos", "Vitaminas")
+            ),
+            snackbarHostState = SnackbarHostState(),
+            onBack = {},
+            onEvent = {}
         )
     }
 }

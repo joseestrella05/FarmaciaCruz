@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -13,7 +14,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -30,12 +30,13 @@ fun AdminOrdenesScreen(
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(Unit) {
-        viewModel.effect.collect { effect ->
-            when (effect) {
-                is AdminOrdenesEffect.ShowError ->
-                    snackbarHostState.showSnackbar(effect.message)
-                is AdminOrdenesEffect.ShowSuccess ->
-                    snackbarHostState.showSnackbar(effect.message)
+        viewModel.uiEvent.collect { event ->
+            when (event) {
+                is AdminOrdenesUiEvent.ShowError ->
+                    snackbarHostState.showSnackbar(event.message)
+
+                is AdminOrdenesUiEvent.ShowSuccess ->
+                    snackbarHostState.showSnackbar(event.message)
             }
         }
     }
@@ -47,7 +48,7 @@ fun AdminOrdenesScreen(
                 title = { Text("Gestión de Órdenes") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, "Volver")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Volver")
                     }
                 },
                 actions = {
@@ -71,7 +72,6 @@ fun AdminOrdenesScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Barra de búsqueda
             SearchBar(
                 query = state.searchQuery,
                 onQueryChange = { viewModel.onEvent(AdminOrdenesEvent.SearchQueryChanged(it)) },
@@ -80,19 +80,16 @@ fun AdminOrdenesScreen(
                     .padding(16.dp)
             )
 
-            // Filtros por estado
             EstadoFilterChips(
                 selectedEstado = state.selectedEstado,
                 estados = state.estados,
                 onEstadoSelected = { viewModel.onEvent(AdminOrdenesEvent.EstadoFilterSelected(it)) }
             )
 
-            // Resumen rápido
             if (state.ordenes.isNotEmpty()) {
                 ResumenOrdenes(ordenes = state.ordenes)
             }
 
-            // Contador de resultados
             Text(
                 text = "${state.ordenesFiltradas.size} órdenes encontradas",
                 style = MaterialTheme.typography.bodySmall,
@@ -100,7 +97,6 @@ fun AdminOrdenesScreen(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
             )
 
-            // Lista de órdenes
             Box(modifier = Modifier.fillMaxSize()) {
                 when {
                     state.isLoading -> {
@@ -108,6 +104,7 @@ fun AdminOrdenesScreen(
                             modifier = Modifier.align(Alignment.Center)
                         )
                     }
+
                     state.error != null -> {
                         ErrorContent(
                             message = state.error!!,
@@ -115,11 +112,13 @@ fun AdminOrdenesScreen(
                             modifier = Modifier.align(Alignment.Center)
                         )
                     }
+
                     state.ordenesFiltradas.isEmpty() -> {
                         EmptyContent(
                             modifier = Modifier.align(Alignment.Center)
                         )
                     }
+
                     else -> {
                         LazyColumn(
                             contentPadding = PaddingValues(16.dp),
@@ -150,7 +149,6 @@ fun AdminOrdenesScreen(
         }
     }
 
-    // Diálogos
     if (state.showChangeStatusDialog && state.ordenSeleccionada != null) {
         ChangeStatusDialog(
             orden = state.ordenSeleccionada!!,
@@ -186,7 +184,7 @@ private fun SearchBar(
     OutlinedTextField(
         value = query,
         onValueChange = onQueryChange,
-        placeholder = { Text("Buscar por ID o cliente...") },
+        placeholder = { Text("Buscar por ID o cliente.") },
         leadingIcon = {
             Icon(Icons.Default.Search, contentDescription = null)
         },
@@ -335,7 +333,6 @@ private fun OrdenCard(
 
             Spacer(Modifier.height(12.dp))
 
-            // Información de la orden
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -373,7 +370,6 @@ private fun OrdenCard(
 
             Spacer(Modifier.height(8.dp))
 
-            // Acciones
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
@@ -395,40 +391,13 @@ private fun OrdenCard(
 }
 
 @Composable
-private fun EstadoBadge(estado: OrderStatus) {
-    Surface(
-        shape = RoundedCornerShape(8.dp),
-        color = getEstadoColor(estado).copy(alpha = 0.15f)
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                imageVector = getEstadoIcon(estado),
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                tint = getEstadoColor(estado)
-            )
-            Spacer(Modifier.width(4.dp))
-            Text(
-                text = getEstadoDisplayName(estado),
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = getEstadoColor(estado)
-            )
-        }
-    }
-}
-
-@Composable
 private fun InfoRow(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     text: String
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
-            imageVector = icon,
+            icon,
             contentDescription = null,
             modifier = Modifier.size(16.dp),
             tint = MaterialTheme.colorScheme.onSurfaceVariant
@@ -443,6 +412,39 @@ private fun InfoRow(
 }
 
 @Composable
+private fun EstadoBadge(estado: OrderStatus) {
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = getEstadoColor(estado).copy(alpha = 0.15f)
+    ) {
+        Text(
+            text = getEstadoDisplayName(estado),
+            style = MaterialTheme.typography.labelSmall,
+            color = getEstadoColor(estado),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+        )
+    }
+}
+
+private fun getEstadoColor(estado: OrderStatus): Color =
+    when (estado) {
+        OrderStatus.PENDIENTE -> Color(0xFFFFA000)
+        OrderStatus.PROCESANDO -> Color(0xFF42A5F5)
+        OrderStatus.COMPLETADO -> Color(0xFF2E7D32)
+        OrderStatus.FALLIDO -> Color(0xFFC62828)
+        OrderStatus.CANCELADO   -> Color(0xFF9E9E9E)
+    }
+
+private fun getEstadoDisplayName(estado: OrderStatus): String =
+    when (estado) {
+        OrderStatus.PENDIENTE -> "Pendiente"
+        OrderStatus.PROCESANDO -> "Procesando"
+        OrderStatus.COMPLETADO -> "Completado"
+        OrderStatus.FALLIDO -> "Fallido"
+        OrderStatus.CANCELADO   -> "Cancelado"
+    }
+
+@Composable
 private fun ChangeStatusDialog(
     orden: OrderAdmin,
     estados: List<OrderStatus>,
@@ -454,21 +456,17 @@ private fun ChangeStatusDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Cambiar Estado") },
+        title = { Text("Cambiar estado") },
         text = {
             Column {
                 Text("Orden #${orden.orderId}")
                 Text(
-                    "Cliente: ${orden.usuarioNombre}",
+                    orden.usuarioNombre,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
                 Spacer(Modifier.height(16.dp))
-
-                Text("Selecciona el nuevo estado:")
-
-                Spacer(Modifier.height(8.dp))
 
                 estados.forEach { estado ->
                     Row(
@@ -478,13 +476,6 @@ private fun ChangeStatusDialog(
                         RadioButton(
                             selected = selectedEstado == estado,
                             onClick = { selectedEstado = estado }
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Icon(
-                            imageVector = getEstadoIcon(estado),
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                            tint = getEstadoColor(estado)
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(getEstadoDisplayName(estado))
@@ -522,24 +513,17 @@ private fun DetalleOrdenDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Orden #${orden.orderId}")
-                EstadoBadge(estado = orden.estado)
-            }
-        },
+        title = { Text("Detalle de orden #${orden.orderId}") },
         text = {
-            Column {
-                DetailRow(label = "Cliente", value = orden.usuarioNombre)
-                DetailRow(label = "Total", value = orden.totalFormateado)
-                DetailRow(label = "Productos", value = "${orden.cantidadProductos} items")
-                DetailRow(label = "Método de Pago", value = orden.metodoPago)
-                DetailRow(label = "Fecha Creación", value = orden.fechaCreacion.take(19).replace("T", " "))
-                DetailRow(label = "Última Actualización", value = orden.fechaActualizacion.take(19).replace("T", " "))
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text("Cliente: ${orden.usuarioNombre}")
+                Text("Total: ${orden.totalFormateado}")
+                Text("Productos: ${orden.cantidadProductos}")
+                Text("Estado: ${getEstadoDisplayName(orden.estado)}")
+                Text("Método de pago: ${orden.metodoPago}")
+                Text("Fecha: ${orden.fechaCreacion.take(19)}")
             }
         },
         confirmButton = {
@@ -548,58 +532,6 @@ private fun DetalleOrdenDialog(
             }
         }
     )
-}
-
-@Composable
-private fun DetailRow(label: String, value: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium
-        )
-    }
-}
-
-@Composable
-private fun getEstadoColor(estado: OrderStatus): Color {
-    return when (estado) {
-        OrderStatus.PENDIENTE -> Color(0xFFFF9800)
-        OrderStatus.PROCESANDO -> Color(0xFF2196F3)
-        OrderStatus.COMPLETADO -> Color(0xFF4CAF50)
-        OrderStatus.FALLIDO -> Color(0xFFF44336)
-        OrderStatus.CANCELADO -> Color(0xFF9E9E9E)
-    }
-}
-
-private fun getEstadoDisplayName(estado: OrderStatus): String {
-    return when (estado) {
-        OrderStatus.PENDIENTE -> "Pendiente"
-        OrderStatus.PROCESANDO -> "Procesando"
-        OrderStatus.COMPLETADO -> "Completado"
-        OrderStatus.FALLIDO -> "Fallido"
-        OrderStatus.CANCELADO -> "Cancelado"
-    }
-}
-
-private fun getEstadoIcon(estado: OrderStatus): androidx.compose.ui.graphics.vector.ImageVector {
-    return when (estado) {
-        OrderStatus.PENDIENTE -> Icons.Default.Schedule
-        OrderStatus.PROCESANDO -> Icons.Default.Sync
-        OrderStatus.COMPLETADO -> Icons.Default.CheckCircle
-        OrderStatus.FALLIDO -> Icons.Default.Error
-        OrderStatus.CANCELADO -> Icons.Default.Cancel
-    }
 }
 
 @Composable
